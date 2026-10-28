@@ -1,6 +1,6 @@
 # 忆织 MemWeave
 
-**项目名：`dsh-mem-weave`**
+**忆织 MemWeave（dsh-mem-weave） —— 把记忆编织进人格（记忆 × 人格一体 DSH 插件）**
 
 忆织是 DeepSeek Harness（DSH）的记忆与人格插件。
 
