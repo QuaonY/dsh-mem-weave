@@ -1,0 +1,43 @@
+# 依赖与构建产物
+node_modules/
+.pnpm-store/
+lib/
+*.tgz
+*.tsbuildinfo
+
+# 只用 pnpm：别的包管理器的锁文件不进仓库
+package-lock.json
+yarn.lock
+npm-debug.log*
+pnpm-debug.log*
+
+# 记忆库与运行时输出（本地数据，可能含个人信息）
+*.db
+*.db.bak.*
+*.db-wal
+*.db-shm
+*.db-journal
+logs/
+*.log
+mirror/
+
+# 测试输出：bench/last.json 由 test/bench.test.ts 每次重写；基线 bench/baseline.json 要进仓库
+bench/last.json
+coverage/
+
+# 本地工作目录（不进公开仓库）
+.acl-recovery/
+.preview/
+_comparison/
+_probe/
+_tmp/
+copylee-image-gen/
+
+# 编辑器、系统与本地环境
+.vscode/
+.idea/
+*.swp
+.DS_Store
+desktop.ini
+.env
+.env.*

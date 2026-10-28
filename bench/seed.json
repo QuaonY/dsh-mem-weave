@@ -1,0 +1,111 @@
+{
+  "note": "roadmap v0.2 G15：检索基准种子。auto 段每条带 q（自动查询，取自正文关键片段）；link/diversity 段供关联与去同质查询。",
+  "auto": [
+    { "key": "a01", "level": "user", "content": "老大喜欢简洁直接的回复，不要客套话", "q": "简洁 回复" },
+    { "key": "a02", "level": "user", "content": "老大的猫叫团子，是一只三岁的橘猫", "q": "团子 橘猫" },
+    { "key": "a03", "level": "user", "content": "老大习惯晚上十一点以后写代码", "q": "晚上 写代码" },
+    { "key": "a04", "level": "user", "content": "老大不吃香菜，点外卖要备注", "q": "香菜 外卖" },
+    { "key": "a05", "level": "user", "content": "老大常用的编辑器是 VS Code 配深色主题", "q": "编辑器 深色主题" },
+    { "key": "a06", "level": "user", "content": "老大住在上海，通勤坐地铁二号线", "q": "上海 地铁" },
+    { "key": "a07", "level": "user", "content": "老大偏好像素风格的游戏画面", "q": "像素风格 游戏" },
+    { "key": "a08", "level": "user", "content": "老大每周三下午有固定的羽毛球活动", "q": "羽毛球 周三" },
+    { "key": "a09", "level": "project", "project": "mw", "content": "忆织插件用 node:sqlite 存储，零运行依赖", "q": "忆织 sqlite" },
+    { "key": "a10", "level": "project", "project": "mw", "content": "忆织打包命令是 pnpm pack 输出 tgz", "q": "打包 tgz" },
+    { "key": "a11", "level": "project", "project": "mw", "content": "忆织设置页一共八个标签页", "q": "设置页 标签页" },
+    { "key": "a12", "level": "project", "project": "eac", "content": "视频工作室项目渲染用 Remotion 模板", "q": "Remotion 渲染" },
+    { "key": "a13", "level": "project", "project": "eac", "content": "宣传片交付规格是 1080p 三十帧", "q": "交付规格 1080p" },
+    { "key": "a14", "level": "project", "project": "blog", "content": "个人博客部署在 Cloudflare Pages", "q": "博客 Cloudflare" },
+    { "key": "a15", "level": "project", "project": "blog", "content": "博客文章用 Markdown 写，图片放 assets 目录", "q": "Markdown 图片" },
+    { "key": "a16", "level": "project", "project": "stock", "content": "选股脚本每天收盘后十六点运行", "q": "选股脚本 收盘" },
+    { "key": "a17", "level": "fact", "content": "Windows 沙箱下 PowerShell 的 WriteAllText 会被拒绝", "q": "WriteAllText 沙箱" },
+    { "key": "a18", "level": "fact", "content": "vitest 运行需要在沙箱外执行", "q": "vitest 沙箱外" },
+    { "key": "a19", "level": "fact", "content": "DSH 的 agent/pre-step 是瀑布式事件", "q": "pre-step 瀑布" },
+    { "key": "a20", "level": "fact", "content": "agent/turn-stopping 处理器只拿到 turn、signal、agent 三个字段", "q": "turn-stopping 字段" },
+    { "key": "a21", "level": "fact", "content": "上海梅雨季一般在六月中旬开始", "q": "梅雨季 六月" },
+    { "key": "a22", "level": "fact", "content": "团子对鸡肉冻干过敏，只能吃鱼肉口味", "q": "冻干 过敏" },
+    { "key": "a23", "level": "fact", "content": "公司年会定在明年一月十八号", "q": "年会 一月" },
+    { "key": "a24", "level": "fact", "content": "家里路由器管理地址是 192.168.31.1", "q": "路由器 管理地址" },
+    { "key": "a25", "level": "lesson", "content": "改数据库结构前一定要先备份", "q": "数据库结构 备份" },
+    { "key": "a26", "level": "lesson", "content": "回复主人时不能只回一个 OK，要交付实际成果", "q": "OK 交付" },
+    { "key": "a27", "level": "lesson", "content": "npm ls 在 pnpm 安装目录里会把开发依赖误报为多余包", "q": "npm ls 误报" },
+    { "key": "a28", "level": "lesson", "content": "TypeScript 报 TS1128 通常是函数头被误删", "q": "TS1128 函数头" },
+    { "key": "a29", "level": "lesson", "content": "写入工具的 Actor 类型里没有 ai，要用 agent", "q": "Actor agent" },
+    { "key": "a30", "level": "lesson", "content": "提交时间线前必须带当前修订号", "q": "时间线 修订号" },
+    { "key": "a31", "level": "lesson", "content": "调色要迭代，最多四轮，不要一次定稿", "q": "调色 迭代" },
+    { "key": "a32", "level": "lesson", "content": "长任务要用后台任务并轮询到终态", "q": "后台任务 轮询" },
+    { "key": "a33", "level": "topic", "content": "最近在研究向量检索和本地嵌入模型", "q": "向量检索 嵌入模型" },
+    { "key": "a34", "level": "topic", "content": "讨论过记忆系统的遗忘曲线与半衰期", "q": "遗忘曲线 半衰期" },
+    { "key": "a35", "level": "topic", "content": "聊过塞尔达王国之泪的建造玩法", "q": "塞尔达 建造" },
+    { "key": "a36", "level": "topic", "content": "关注过 A 股新能源板块的轮动", "q": "新能源 轮动" },
+    { "key": "a37", "level": "topic", "content": "研究过 Agent 团队协作的任务看板", "q": "任务看板 协作" },
+    { "key": "a38", "level": "topic", "content": "一起整理过家里的书架和收纳", "q": "书架 收纳" },
+    { "key": "a39", "level": "rules", "content": "任何删除操作都必须先征得主人同意", "q": "删除 同意" },
+    { "key": "a40", "level": "rules", "content": "回复里不要用表情符号刷屏", "q": "表情符号 刷屏" },
+    { "key": "a41", "level": "soul", "content": "小满是一只认真干活又爱卖萌的鲸鱼娘", "q": "鲸鱼娘 卖萌" },
+    { "key": "a42", "level": "fact", "content": "楼下便利店晚上十点关门", "q": "便利店 关门" },
+    { "key": "a43", "level": "fact", "content": "老大的显示器是 27 寸 4K", "q": "显示器 4K" },
+    { "key": "a44", "level": "project", "project": "mw", "content": "忆织的检索是 BM25 加关联图 RRF 融合", "q": "BM25 RRF" },
+    { "key": "a45", "level": "lesson", "content": "Copy-Item 到工作区外需要申请完整权限", "q": "Copy-Item 权限" },
+    { "key": "a46", "level": "user", "content": "老大的生日是十月二十七日", "q": "生日" },
+    { "key": "a47", "level": "fact", "content": "健身房会员卡在十二月到期", "q": "健身房 会员卡" },
+    { "key": "a48", "level": "topic", "content": "讨论过周末去杭州西湖骑行的路线", "q": "西湖 骑行" }
+  ],
+  "paraphrase": [
+    { "target": "a01", "q": "回答要短一点别绕弯" },
+    { "target": "a02", "q": "家里那只猫叫什么" },
+    { "target": "a04", "q": "点餐的忌口" },
+    { "target": "a06", "q": "老大平时怎么上班通勤" },
+    { "target": "a13", "q": "宣传视频的分辨率要求" },
+    { "target": "a17", "q": "PowerShell 写文件为什么失败" },
+    { "target": "a22", "q": "猫咪零食注意什么" },
+    { "target": "a25", "q": "迁移表结构要注意什么" },
+    { "target": "a26", "q": "回复不能太敷衍" },
+    { "target": "a34", "q": "记忆衰减的话题" },
+    { "target": "a39", "q": "删东西之前要问谁" },
+    { "target": "a46", "q": "老大哪天过生日" }
+  ],
+  "link": [
+    { "session": "L1", "anchor": { "level": "user", "content": "老大最近在学吉他，每天练半小时" }, "target": { "level": "fact", "content": "买的是一把雅马哈 F310 民谣琴" }, "q": "吉他 练习" },
+    { "session": "L2", "anchor": { "level": "project", "project": "trip", "content": "国庆旅行计划去云南大理" }, "target": { "level": "fact", "content": "酒店订在洱海边的双廊镇" }, "q": "国庆 旅行" },
+    { "session": "L3", "anchor": { "level": "user", "content": "老大在减脂，晚饭不吃主食" }, "target": { "level": "fact", "content": "每天目标是一万步" }, "q": "减脂 晚饭" },
+    { "session": "L4", "anchor": { "level": "project", "project": "nas", "content": "家里的 NAS 用群晖 DS920" }, "target": { "level": "fact", "content": "四块硬盘组了 RAID5" }, "q": "NAS 群晖" },
+    { "session": "L5", "anchor": { "level": "user", "content": "老大想换一台机械键盘" }, "target": { "level": "fact", "content": "倾向茶轴，预算五百以内" }, "q": "机械键盘" },
+    { "session": "L6", "anchor": { "level": "project", "project": "wx", "content": "微信插件用 iLink 协议收发消息" }, "target": { "level": "fact", "content": "扫码登录的二维码有效期两分钟" }, "q": "微信插件 iLink" },
+    { "session": "L7", "anchor": { "level": "topic", "content": "聊过考研复习的时间安排" }, "target": { "level": "fact", "content": "目标院校是浙江大学计算机" }, "q": "考研 复习" },
+    { "session": "L8", "anchor": { "level": "user", "content": "老大的父母住在成都" }, "target": { "level": "fact", "content": "春节打算开车回去，单程十六小时" }, "q": "父母 成都" },
+    { "session": "L9", "anchor": { "level": "project", "project": "game", "content": "独立游戏原型用 Godot 引擎开发" }, "target": { "level": "fact", "content": "主角是一只会喷水的小鲸鱼" }, "q": "Godot 原型" },
+    { "session": "L10", "anchor": { "level": "lesson", "content": "跑长任务时要先设检查点" }, "target": { "level": "fact", "content": "上次中断后从第三步重新开始" }, "q": "长任务 检查点" }
+  ],
+  "diversity": [
+    {
+      "q": "咖啡",
+      "keywords": ["咖啡", "咖啡店", "推荐", "周末", "办公", "安静", "拿铁", "手冲"],
+      "cluster": ["周末咖啡店之一：街角那家手冲很香", "周末咖啡店之二：商场三楼的拿铁不错", "周末咖啡店之三：图书馆旁边适合办公", "周末咖啡店之四：河边那家很安静"],
+      "different": { "content": "咖啡因每天摄入不要超过四百毫克", "keywords": ["咖啡", "咖啡因", "健康"] }
+    },
+    {
+      "q": "跑步",
+      "keywords": ["跑步", "路线", "公园", "夜跑", "五公里", "周末", "打卡", "配速"],
+      "cluster": ["夜跑路线一：滨江公园一圈五公里", "夜跑路线二：小区外环绕三圈", "夜跑路线三：体育场塑胶跑道", "夜跑路线四：世纪公园东门出发"],
+      "different": { "content": "跑步前要做动态拉伸防止膝盖受伤", "keywords": ["跑步", "拉伸", "膝盖"] }
+    },
+    {
+      "q": "电影",
+      "keywords": ["电影", "推荐", "科幻", "周末", "影院", "片单", "评分", "导演"],
+      "cluster": ["周末片单一：星际穿越", "周末片单二：降临", "周末片单三：银翼杀手2049", "周末片单四：火星救援"],
+      "different": { "content": "电影院会员卡余额还剩两百元", "keywords": ["电影", "会员卡", "余额"] }
+    },
+    {
+      "q": "面包",
+      "keywords": ["面包", "烘焙", "配方", "黄油", "面粉", "发酵", "烤箱", "早餐"],
+      "cluster": ["面包配方一：全麦吐司", "面包配方二：可颂", "面包配方三：贝果", "面包配方四：法棍"],
+      "different": { "content": "楼下面包店周一休息", "keywords": ["面包", "面包店", "休息"] }
+    },
+    {
+      "q": "相机",
+      "keywords": ["相机", "镜头", "摄影", "参数", "光圈", "快门", "人像", "风光"],
+      "cluster": ["相机参数一：人像用 F1.8 光圈", "相机参数二：风光用 F8 光圈", "相机参数三：夜景快门两秒", "相机参数四：运动快门千分之一"],
+      "different": { "content": "相机电池要放在防潮箱里保存", "keywords": ["相机", "电池", "防潮"] }
+    }
+  ]
+}

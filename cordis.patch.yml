@@ -1,0 +1,71 @@
+# 忆织 MemWeave —— cordis 装配补丁（随包安装，重启生效）
+# 配置 schema 见规划文档附录 A；所有键均可缺省，缺省即最保守行为（零行为改变）。
+- insert:
+    - id: mem-weave
+      name: dsh-mem-weave
+      config:
+        dataDir: ""                      # 空 = $DSH_HOME/memweave（库 memweave.db）
+        promptLang: zh
+        strict: false                    # true = 所有记忆写入需人确认
+        persona:
+          enabled: true
+          applyNextSession: true
+          order: auto
+        memory:
+          snapshotMaxChars: 4000
+          deltaMaxChars: 1200
+          recallMaxChars: 900
+          recallMaxItems: 5
+          hitTopK: 5
+        recall:
+          routes: [keyword, link]
+          rrfK: 60
+          weights:
+            keyword: 1.0
+            semantic: 0.8
+            link: 0.5
+          synonymsFile: ""
+          vector:
+            enabled: false
+            backend: local-onnx
+            modelDir: ""
+        dream:
+          enabled: true
+          idleMinutes: 180
+          timezone: Asia/Shanghai
+          peakHours: [[9, 12], [14, 18]]
+        lifecycle:
+          halfLifeDays:
+            topic: 30
+            fact: 90
+            project: 180
+            user: 365
+            soul: 365
+            lesson: 365
+            rules: 0
+          coldMemoryMonths: 6
+        governance:
+          autoAcceptLowRisk: true
+          undoWindowHours: 24
+          requireConfirmFor: [rules, soul, persona, delete]
+          sensitivePatterns: default
+        mirror:
+          enabled: true
+          rebuildDebounceMs: 60000
+          maxFileKb: 25
+        quote:
+          enabled: false
+          indexDays: 90
+        budget:
+          totalWarnChars: 6000
+          personaWarnOnly: true
+        ui:
+          entry: both
+          defaultTab: overview
+          showStatusBadge: true
+          locale: auto
+          virtualList: true
+          listPageSize: 50
+          confirmDangerByTyping: true
+          previewParityAssert: true
+          auditMask: true

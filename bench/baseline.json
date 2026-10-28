@@ -1,0 +1,41 @@
+{
+  "legacy": {
+    "queries": 60,
+    "top3": 0.9333333333333333,
+    "mrr": 0.9333333333333333,
+    "avgChars": 30,
+    "linkTop5": 0,
+    "diversityTop3": 1,
+    "misses": [
+      "p:a01「回答要短一点别绕弯」",
+      "p:a04「点餐的忌口」",
+      "p:a22「猫咪零食注意什么」",
+      "p:a39「删东西之前要问谁」",
+      "link:L1",
+      "link:L2",
+      "link:L3",
+      "link:L4",
+      "link:L5",
+      "link:L6",
+      "link:L7",
+      "link:L8",
+      "link:L9",
+      "link:L10"
+    ]
+  },
+  "new": {
+    "queries": 60,
+    "top3": 0.9333333333333333,
+    "mrr": 0.9333333333333333,
+    "avgChars": 38,
+    "linkTop5": 0.9,
+    "diversityTop3": 1,
+    "misses": [
+      "p:a01「回答要短一点别绕弯」",
+      "p:a04「点餐的忌口」",
+      "p:a22「猫咪零食注意什么」",
+      "p:a39「删东西之前要问谁」",
+      "link:L6"
+    ]
+  }
+}
