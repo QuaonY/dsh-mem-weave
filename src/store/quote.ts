@@ -42,8 +42,14 @@ export function setZstdProbeForTest(fn: ZstdFn | null | undefined): void {
 
 const ZSTD_MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
 
+/** 一帧最多向后合并几段：防止压缩数据里大量假魔数时退化成平方级 */
+const MAX_FRAME_SPANS = 64;
+
 /**
  * 解压「多帧 zstd 拼接」文件内容：按帧魔数切分，逐帧独立解压拼接。
+ * 每次只解 [本帧起点, 下一个魔数) 这一段，不把后面的帧带进去：
+ * 不同 Node / libzstd 版本对「输入里带着后续帧」的处理不一样，有的会把后续帧一起解出来（内容重复），
+ * 有的遇到后面损坏的帧会整段报错。压缩数据里碰巧出现魔数字节时，这一段解不开，就并上下一段再试。
  * 单帧解压失败跳过该帧，不整体失败（宿主正写入的尾帧可能不完整）。
  */
 export function decodeZstdConcat(buf: Buffer, maxBytes = 8 * 1024 * 1024): string {
@@ -64,14 +70,28 @@ export function decodeZstdConcat(buf: Buffer, maxBytes = 8 * 1024 * 1024): strin
   }
   const parts: string[] = [];
   let size = 0;
-  for (const off of offsets) {
-    if (size >= maxBytes) break;
-    try {
-      const out = Buffer.from(fn(buf.subarray(off))).toString("utf8");
-      parts.push(out);
-      size += out.length;
-    } catch {
-      // 尾帧未写完 / 假魔数命中：跳过
+  let k = 0;
+  while (k < offsets.length && size < maxBytes) {
+    const start = offsets[k];
+    let next = k + 1;
+    let decoded: string | null = null;
+    // 先试到下一个魔数为止；解不开说明那个魔数可能是假的，并上下一段再试
+    for (let spans = 0; spans < MAX_FRAME_SPANS && decoded === null; spans += 1) {
+      const end = next < offsets.length ? offsets[next] : buf.length;
+      try {
+        decoded = Buffer.from(fn(buf.subarray(start, end))).toString("utf8");
+      } catch {
+        if (next >= offsets.length) break;
+        next += 1;
+      }
+    }
+    if (decoded !== null) {
+      parts.push(decoded);
+      size += decoded.length;
+      k = next;
+    } else {
+      // 尾帧未写完 / 损坏：跳过这个起点，从下一个魔数继续
+      k += 1;
     }
   }
   return parts.join("").slice(0, maxBytes);

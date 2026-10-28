@@ -1,9 +1,12 @@
-# 推送 v* 标签（如 v0.7.11）时：检查 → 测试 → 打包 → 创建 GitHub Release 并附上 tgz。
-# 手动运行（Actions 页 Run workflow）只做检查、测试、打包，产物放在本次运行的 Artifacts 里，不发 Release。
+# 推送 v* 标签（如 v0.7.12）时：检查 → 测试 → 打包 → 创建 GitHub Release 并附上 tgz。
+# 推送 main 或手动运行（Actions 页 Run workflow）时：只做检查、测试、打包，
+# 产物放在本次运行的 Artifacts 里，不发 Release。
 name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:

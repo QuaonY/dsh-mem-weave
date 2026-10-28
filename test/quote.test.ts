@@ -89,11 +89,23 @@ describe("多帧 zstd 解压", () => {
     expect(out).toContain('"seq":2');
   });
 
+  it("每帧只解一次：不因 libzstd 连带解出后续帧而重复（Linux CI 曾重复成 2 行）", () => {
+    const buf = compressFrames(["A1\n", "B2\n", "C3\n"]);
+    expect(decodeZstdConcat(buf)).toBe("A1\nB2\nC3\n");
+  });
+
+  it("中间帧损坏只丢这一帧，前后帧都在且不重复", () => {
+    const a = compressFrames(["A1\n"]);
+    const c = compressFrames(["C3\n"]);
+    const bad = Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0xff, 0xff]);
+    expect(decodeZstdConcat(Buffer.concat([a, bad, c]))).toBe("A1\nC3\n");
+  });
+
   it("尾帧损坏只丢尾帧", () => {
     const good = compressFrames(['{"type":"session","id":"s1"}\n']);
     const bad = Buffer.concat([good, Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0xff, 0xff])]);
     const out = decodeZstdConcat(bad);
-    expect(out).toContain("s1");
+    expect(out).toBe('{"type":"session","id":"s1"}\n');
   });
 
   it("zstd 不可用时返回空串", () => {
