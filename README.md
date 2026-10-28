@@ -52,14 +52,21 @@
 
 ## 安装
 
-需要 DSH 桌面端，Node.js 要支持 `node:sqlite`。DSH 自带的 Node v24 可以直接用。
+需要 DSH，不用另装 Node.js，DSH 自带的就能跑。
+
+在 [Releases](https://github.com/QuaonY/dsh-mem-weave/releases) 页面找到最新的版本，把下面命令里的 `<版本>` 换成它（页面上标着 `v0.7.12` 的话，就填 `0.7.12`）：
 
 ```bash
-pnpm install
-pnpm pack
+dsh plugin --profile desktop add https://github.com/QuaonY/dsh-mem-weave/releases/download/v<版本>/dsh-mem-weave-<版本>.tgz
 ```
 
-把生成的 `dsh-mem-weave-<版本>.tgz` 作为 `file:` 依赖加到 DSH profile 的 `package.json` 里，然后重启 DSH。默认配置就能用。
+`--profile` 填你在用的 profile，桌面端一般是 `desktop`，网页版是 `web`。tgz 已经下载到本地的话，也可以直接填文件路径：
+
+```bash
+dsh plugin --profile desktop add file:<tgz 的完整路径>
+```
+
+装完重启 DSH，默认配置就能用。卸载把 `add` 换成 `remove dsh-mem-weave`。
 
 记忆库默认放在 `$DSH_HOME/memweave/memweave.db`，可以在界面「备份 → 存储位置」里迁移。
 
@@ -117,6 +124,7 @@ DSH 里有八个页面：
 pnpm build          # 构建 lib/
 pnpm typecheck      # 类型检查
 pnpm test           # 运行测试
+pnpm pack           # 打成本地 tgz，用来自己安装
 pnpm weave status   # 命令行运维
 ```
 
