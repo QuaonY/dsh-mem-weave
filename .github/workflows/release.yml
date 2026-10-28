@@ -1,0 +1,66 @@
+# 推送 v* 标签（如 v0.7.11）时：检查 → 测试 → 打包 → 创建 GitHub Release 并附上 tgz。
+# 手动运行（Actions 页 Run workflow）只做检查、测试、打包，产物放在本次运行的 Artifacts 里，不发 Release。
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # 插件用到 node:sqlite，和 DSH 自带的 Node 主版本保持一致
+          node-version: 24
+          cache: pnpm
+
+      - name: Check tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::标签 $GITHUB_REF_NAME 和 package.json 版本 $PKG_VERSION 不一致"
+            exit 1
+          fi
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Pack
+        # prepack 会先构建 lib/
+        run: npm pack
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-mem-weave-tgz
+          path: dsh-mem-weave-*.tgz
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dsh-mem-weave-*.tgz
+          fail_on_unmatched_files: true
+          generate_release_notes: true
