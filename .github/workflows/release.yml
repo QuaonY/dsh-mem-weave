@@ -69,7 +69,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dsh-mem-weave-*.tgz
-          # 发版说明由维护者写在 RELEASE_NOTES.md，随版本一起改；
-          # 不用 GitHub 自动生成的 compare 链接，那对读者没有信息量。
-          body_path: RELEASE_NOTES.md
           fail_on_unmatched_files: true
+          generate_release_notes: true
