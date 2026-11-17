@@ -1,0 +1,45 @@
+# CNB 流水线：推送 v* 标签时构建、打包，创建 CNB Release 并上传安装包。
+# 与 GitHub 的 .github/workflows/release.yml 对应，两边各自产出同版本 tgz。
+$:
+  tag_push:
+    - docker:
+        image: node:24
+      stages:
+        - name: 安装依赖并构建
+          script: |
+            set -e
+            npm install -g pnpm@11.28.5
+            pnpm install --frozen-lockfile
+            pnpm build
+
+        - name: 打包安装包
+          script: |
+            set -e
+            npm pack
+            ls -lh dsh-mem-weave-*.tgz
+
+        - name: 从 CHANGELOG 取本版说明
+          script: |
+            set -e
+            node --input-type=module -e '
+            import fs from "node:fs";
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const text = fs.readFileSync("CHANGELOG.md", "utf8");
+            const start = text.indexOf("## [" + pkg.version + "]");
+            if (start < 0) { console.error("CHANGELOG 缺少 " + pkg.version); process.exit(1); }
+            const rest = text.slice(start);
+            const next = rest.indexOf("\n## [", 1);
+            fs.writeFileSync("RELEASE_NOTES.md", (next < 0 ? rest : rest.slice(0, next)).trim() + "\n");
+            '
+            head -20 RELEASE_NOTES.md
+
+        - name: 创建 Release
+          type: git:release
+          options:
+            descriptionFromFile: RELEASE_NOTES.md
+
+        - name: 上传安装包
+          image: cnbcool/attachments:latest
+          settings:
+            attachments:
+              - "./dsh-mem-weave-*.tgz"

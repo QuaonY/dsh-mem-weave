@@ -8,4 +8,4 @@
 
 仓库根目录另有 [README](../README.md)（English）、[README.zh-CN.md](../README.zh-CN.md)（中文）与 [CHANGELOG](../CHANGELOG.md)。
 
-对应 **v1.0.0**。
+对应 **v1.0.1**。
