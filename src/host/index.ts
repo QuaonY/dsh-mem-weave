@@ -362,8 +362,10 @@ export function appendTurnNotice(service: WeaveService, agent: unknown, warn: (m
     const cfg = service.config.governance?.turnNotice ?? { enabled: true };
     const notice = buildTurnNotice(service.env, since, service.config.promptLang ?? "zh", cfg);
     if (!notice.enabled) return false;
-    // 同一轮里 turn-stopping 可能再次触发：窗口前移，避免重复计数
-    turnStartByAgent.set(agent, Date.now());
+    // 同一轮里 turn-stopping 可能再次触发：窗口前移，避免重复计数。
+    // +1 让边界严格晚于本轮通知：否则第二次触发与写入落在同一毫秒时，
+    // `ts >= since` 仍会把那条 audit 算进来，于是又发一张卡片。
+    turnStartByAgent.set(agent, Date.now() + 1);
     session.append("user/message", {
       id: randomUUID(),
       role: "user",

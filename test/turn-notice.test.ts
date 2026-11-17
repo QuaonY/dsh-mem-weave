@@ -103,6 +103,28 @@ describe("轮后通知 turn notice", () => {
     expect(appended[0].data.source.summary).toBe("忆织：本轮写入 1 条");
   });
 
+  it("同一毫秒内的重复 turn-stopping 也只发一张卡片", async () => {
+    plugin.apply(makeCtx(), { dataDir: dir });
+    const service = plugin.runtime()!.service;
+    const { agent, appended } = makeAgent();
+
+    // 冻结时钟，复现「写入与第二次 turn-stopping 同毫秒」的竞态
+    const realNow = Date.now;
+    const fixed = realNow();
+    Date.now = () => fixed;
+    try {
+      await startTurn(agent, 1);
+      await service.remember({ level: "fact", content: "同一毫秒写入的一条事实" }, "agent");
+      await stopTurn(agent, 1);
+      await stopTurn(agent, 1);
+      await stopTurn(agent, 1);
+    } finally {
+      Date.now = realNow;
+    }
+
+    expect(appended).toHaveLength(1);
+  });
+
   it("敏感内容被拦截：只报条数，不把原文写进通知", async () => {
     plugin.apply(makeCtx(), { dataDir: dir });
     const service = plugin.runtime()!.service;
