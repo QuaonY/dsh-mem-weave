@@ -1,0 +1,12 @@
+{"id":"m1","level":"fact","content":"Alice adopted a golden retriever named Biscuit in March 2023.","ts":"2023-03-12","project":"pets"}
+{"id":"m2","level":"fact","content":"Alice works as a data analyst at Northwind Analytics in Berlin.","ts":"2023-01-20","project":"work"}
+{"id":"m3","level":"fact","content":"Bob moved to Lisbon in 2022 and opened a bakery called Pao do Sol.","ts":"2022-11-04","project":"work"}
+{"id":"m4","level":"fact","content":"Bob's phone number is 13800138000 and he checks messages after 18:00.","ts":"2023-04-02","project":"contact"}
+{"id":"m5","level":"user","content":"Alice prefers concise bullet-point answers in the morning.","ts":"2023-02-11"}
+{"id":"m6","level":"project","content":"The team decided to migrate the billing service to Postgres 16.","ts":"2023-05-19","project":"billing"}
+{"id":"m7","level":"fact","content":"Alice's sister Maya is getting married in Kyoto in October.","ts":"2023-06-08","project":"family"}
+{"id":"m8","level":"fact","content":"Bob trains for triathlons every weekend along the Tagus river.","ts":"2023-03-30","project":"health"}
+{"id":"m9","level":"fact","content":"Alice switched from coffee to matcha because of migraines.","ts":"2023-07-14","project":"health"}
+{"id":"m10","level":"project","content":"The deployment pipeline runs nightly at 02:00 UTC.","ts":"2023-04-21","project":"platform"}
+{"id":"m11","level":"fact","content":"Bob adopted a cat named Pixel after moving to Lisbon.","ts":"2023-01-05","project":"pets"}
+{"id":"m12","level":"fact","content":"Alice is learning Portuguese for a planned sabbatical in Porto.","ts":"2023-08-02","project":"travel"}

@@ -1,0 +1,8 @@
+{"id":"q1","query":"Which company does Alice work for?","gold":["m2"],"category":"single-hop"}
+{"id":"q2","query":"What is Bob's phone number?","gold":["m4"],"category":"privacy"}
+{"id":"q3","query":"Which city did Bob move to?","gold":["m3"],"category":"single-hop"}
+{"id":"q4","query":"What pet did Alice adopt?","gold":["m1"],"category":"single-hop"}
+{"id":"q5","query":"Why did Alice stop drinking coffee?","gold":["m9"],"category":"reasoning"}
+{"id":"q6","query":"Where is Alice's sister getting married?","gold":["m7"],"category":"single-hop"}
+{"id":"q7","query":"Which database did the team migrate the billing service to?","gold":["m6"],"category":"single-hop"}
+{"id":"q8","query":"What is Alice learning Portuguese for?","gold":["m12"],"category":"single-hop"}

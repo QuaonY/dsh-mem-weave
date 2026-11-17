@@ -1,0 +1,6 @@
+# 文本文件在仓库里和检出时都统一用 LF，不受各人 core.autocrlf 影响
+* text=auto eol=lf
+
+# sqlite-vec 原生扩展必须原样保存：不能做任何换行转换，否则二进制会损坏
+vendor/sqlite-vec/** binary
+lib/native/** binary

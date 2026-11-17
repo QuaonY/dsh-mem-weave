@@ -1,0 +1,18 @@
+# 依赖与构建产物（都在本机重建，不进仓库）
+node_modules/
+lib/
+.vendor-cache/
+*.tgz
+
+# 测试与覆盖率输出
+coverage/
+test-data/
+bench/last.json
+
+# 本地数据库
+*.db
+*.db-*
+
+# 本地环境
+.env*
+package-lock.json

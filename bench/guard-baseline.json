@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "recordedAt": "2026-11-11",
+  "tolerance": 0.01,
+  "note": "首次全量跑分基线（单机实测）：LME 470 题会话粒度、LoCoMo 1982 题轮粒度。数值为小数（0.962 = 96.2%）。LoCoMo ndcg@5 的下降已定位到 FTS 候选上限 200（诊断到 2000 可恢复）。",
+  "counts": {
+    "lme": 470,
+    "locomo": 1982
+  },
+  "metrics": {
+    "lme.session.k5.recall_any": 0.9617021276595744,
+    "lme.session.k5.recall_all": 0.8404255319148937,
+    "lme.session.k5.ndcg": 0.8524461426780007,
+    "lme.session.k10.recall_any": 0.9744680851063829,
+    "lme.session.k10.recall_all": 0.902127659574468,
+    "lme.session.k10.ndcg": 0.8703579874861797,
+    "locomo.turn.k5.recall_any": 0.5832492431886983,
+    "locomo.turn.k5.recall_all": 0.5005045408678103,
+    "locomo.turn.k5.recall_mean": 0.5367231769839764,
+    "locomo.turn.k5.ndcg": 0.48512146682510515,
+    "locomo.turn.k5.ans_in_ctx": 0.22005208333333334,
+    "locomo.turn.k10.recall_any": 0.6659939455095862,
+    "locomo.turn.k10.recall_all": 0.5746720484359233,
+    "locomo.turn.k10.recall_mean": 0.6169894032397665,
+    "locomo.turn.k10.ndcg": 0.5124995476911559,
+    "locomo.turn.k10.ans_in_ctx": 0.2513020833333333
+  }
+}

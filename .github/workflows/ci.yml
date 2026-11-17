@@ -1,0 +1,83 @@
+# CI：Windows + Ubuntu × Node 22 / 24
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: [22, 24]
+        
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        # 先构建再做其余检查：bench 跑分器与打包用例都读 lib/。
+        # 缺产物时它们会各自自动构建，并行跑用例会互相覆盖，导致偶发失败。
+        run: pnpm build
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Run tests with coverage gate
+        # 覆盖率门禁：语句 / 行 70%、分支 / 函数 75%（当前实测约 78 / 78 / 80 / 83），
+        # 低于阈值退出码 1；阈值定义在 vitest.config.ts。
+        # 规模基准：test/scale-bench.test.ts 的 1k p95 < 200ms、10k p95 < 600ms
+        run: pnpm test:coverage
+
+      - name: Check build artifacts
+        run: |
+          test -f lib/index.js || exit 1
+          test -f lib/client.js || exit 1
+        shell: bash
+
+  conformance:
+    name: Conformance check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run conformance check
+        run: pnpm conformance
