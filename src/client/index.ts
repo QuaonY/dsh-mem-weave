@@ -47,11 +47,6 @@ function domSlot(mount: (host: HTMLElement, props: Record<string, unknown>) => D
   };
 }
 
-/** 宿主 ctx + 插槽容器：mountBadge 只读 container/element，其余属性沿原型链透传 */
-function slotCtx(ctx: AnyCtx, host: HTMLElement): AnyCtx {
-  return Object.assign(Object.create(ctx as object) as AnyCtx, { container: host });
-}
-
 function optionalService<T>(ctx: AnyCtx, name: string): T | undefined {
   const get = (ctx as { get?: (key: string) => T | undefined }).get;
   if (typeof get === "function") return get.call(ctx, name);
@@ -207,9 +202,9 @@ function setupUi(ctx: AnyCtx): Disposer {
       };
     });
 
-    // 会话侧栏状态徽章（冲突/候选/撤销/本轮）
+    // 会话侧栏状态徽章（冲突/候选/撤销/本轮）；容器直接从插槽拿，不写回 ctx
     const BadgeDock = domSlot((host) => {
-      mountBadge(slotCtx(ctx, host));
+      mountBadge(ctx, host);
       return () => unmountBadge();
     });
 

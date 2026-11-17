@@ -4,6 +4,13 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.0.2] - 2026-11-17
+
+修复输入框旁的记忆徽章在 DSH 0.2.x 上挂载即报错的问题（`Cannot set property "container" without provide`）：
+
+- 不再往受保护的插件上下文副本上写 `container`，插槽容器直接传给徽章。
+- 补齐兜底：读不到容器时退回 `document.body`；RPC 未就绪或上下文里读不到本轮信息时静默跳过，不再留下未处理的异常。
+
 ## [1.0.1] - 2026-11-17
 
 优化记忆的整体流程与向量检索：
