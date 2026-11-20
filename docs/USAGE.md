@@ -20,7 +20,7 @@
 }
 ```
 
-这些键的默认值同样写在随包的 `cordis.patch.yml` 里。
+这些键的默认值同样写在随包的 `cordis.patch.yml` 里。表内为常用键；全量键与默认值见 `src/host/service.ts` 的 `defaultConfig()`。
 
 ### 1.1 通用
 
@@ -53,13 +53,17 @@
 | `recall.weights.semantic` | `0.8` | 语义路权重 |
 | `recall.weights.link` | `0.5` | 链接扩展权重 |
 | `recall.synonymsFile` | 空 | 同义词表（JSON）路径 |
-| `recall.vector.enabled` | `false` | 是否启用向量检索 |
-| `recall.vector.backend` | `local-onnx` | 向量后端偏好 |
+| `recall.semanticMinScore` | `0.42` | 语义路最小余弦；本地小模型相关度普遍偏低，设太高会整段丢命中 |
+| `embedding.baseUrl` / `model` / `dimensions` | 无 | embedding 服务三件套，齐全即建立 provider；也可用环境变量指定（见 1.6） |
+| `embedding.apiKey` | 无 | 服务密钥，建议放环境变量；设置查询接口不回显明文 |
+| `embedding.enabled` | 缺省视为开 | `false` = 显式关闭语义路 |
 | `lifecycle.halfLifeDays` | 见下 | 各层半衰期 |
 | `lifecycle.decayFloor` | `0.1` | 时间衰减下限；设 0 即纯指数衰减 |
 | `lifecycle.coldMemoryMonths` | `6` | 多久没用视为冷记忆（可归档） |
 
 `lifecycle.halfLifeDays` 默认：`topic` 30、`fact` 90、`project` 180、`user` / `soul` / `lesson` 365、`rules` 0（不衰减）。
+
+向量总开关不在配置文件里：在界面「高级 → 向量检索」开启（存记忆库）。后端按 `sqlite-vec → vectra → builtin` 自动探测，唯一关闭开关是 `MEMWEAVE_VECTOR_BACKEND=off`。语义路需「开关开 + provider 已配 + 后端可用」三者齐备才参与融合，任一环缺失只走关键词。
 
 ### 1.4 整理、治理、镜像
 
@@ -73,6 +77,7 @@
 | `governance.undoWindowHours` | `24` | 可撤销窗口（小时） |
 | `governance.requireConfirmFor` | `[rules, soul, persona, delete]` | 必须人工确认的操作 |
 | `governance.sensitivePatterns` | `default` | 敏感词规则集 |
+| `governance.turnNotice.enabled` | `true` | 轮后「这轮记了什么」卡片（只带脱敏摘要、限定本会话） |
 | `mirror.enabled` | `true` | 生成人类可读镜像 |
 | `mirror.rebuildDebounceMs` | `60000` | 镜像重建防抖 |
 | `mirror.maxFileKb` | `25` | 单个镜像文件上限 |
@@ -81,7 +86,15 @@
 | `budget.totalWarnChars` | `6000` | 三段合计超此值时提示 |
 | `budget.personaWarnOnly` | `true` | 人格超预算只警告不裁剪 |
 
-### 1.5 环境变量
+### 1.5 隐私与画像
+
+| 键 | 默认 | 说明 |
+| --- | --- | --- |
+| `privacy.recallPolicy` | `redact` | 读出侧脱敏：字段级脱敏；`filter` = 整条不参与召回与注入 |
+| `profile.enabled` | `true` | 用户画像功能 |
+| `profile.injectToS2` | `true` | 画像摘要注入 S2 首轮快照 |
+
+### 1.6 环境变量
 
 | 变量 | 作用 |
 | --- | --- |
@@ -150,3 +163,5 @@ node scripts/weave.mjs reset       # 需手输 RESET，且先强制备份
 **能彻底删除吗？** 永久删除只能由人操作并需手输确认；AI 调用 `weave_forget` 只做归档，原文可恢复。
 
 **换电脑怎么迁移？** 在「备份」页导出（可加密）后在新机器恢复；或直接迁移整个 `dataDir`（先退出 DSH）。
+
+**语义路没生效？** 查三件事：界面「高级」的向量开关、embedding provider（配置 `embedding` 或环境变量）、后端是否可用（「总览」健康检查看向量后端）。恢复备份后后端会自动重新探测。任一环缺失只走关键词，召回不会不可用。

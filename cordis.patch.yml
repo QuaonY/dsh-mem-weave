@@ -25,9 +25,6 @@
             semantic: 0.8
             link: 0.5
           synonymsFile: ""
-          vector:
-            enabled: false
-            backend: local-onnx
         dream:
           enabled: true
           idleMinutes: 180

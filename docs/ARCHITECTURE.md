@@ -14,7 +14,7 @@ DSH 宿主
  └── src/client    九个界面页面（React）
 ```
 
-宿主只加载 `lib/index.js`；界面在 `lib/client.js`，React 由宿主注入。两者都由 `scripts/build.mjs` 用 esbuild 打成单文件。
+宿主只加载 `lib/index.js`；界面在 `lib/client.js`，React 由宿主注入。两者都由 `scripts/build.mjs` 用 esbuild 打成单文件。测试与召回基准在 `test/`（基准套件 `test/bench`），不随包分发。
 
 ## 2. 记忆的七个层
 
@@ -35,7 +35,7 @@ DSH 宿主
 | 段 | 时机 | 内容 | 默认上限 |
 | --- | --- | --- | --- |
 | S1 人格 | 每轮 | 人格正文 + 思考语言 + 后缀，9 个块按固定顺序拼接 | 由人格长度决定 |
-| S2 快照 | 会话第一轮 | 你是谁、规则、关系、进行中的项目 | 4000 字 |
+| S2 快照 | 会话第一轮 | 你是谁、规则、关系、进行中的项目、用户画像摘要 | 4000 字 |
 | S3 增量 + 召回 | 之后每轮 | 新增/改动的记忆 + 与本轮话题相关的记忆 | 1200 + 900 字，最多 5 条 |
 
 块顺序固定、缺块不留空行；超限按优先级裁剪并写入 `inject_state`（界面「注入与预算」可核对）；注入前统一清理特殊括号与换行，防止伪造段落。
@@ -51,7 +51,7 @@ FTS5 前置候选（分词串，中文按二元组）
 
 - 权重默认：关键词 1.0、语义 0.8、链接 0.5（`recall.weights`）；`importance` 只在主分数相同时作 tie-breaker。
 - 结果带 `trace`（命中原因、衰减系数），界面「记忆 → 检索解释」可见。
-- 语义路需开启向量检索（`recall.vector.enabled`）并配置 embedding provider；未配置时只走关键词。启动时只探测本机 `127.0.0.1` 的 Ollama / LM Studio，`MEMWEAVE_EMBEDDING_DISCOVERY=0` 可关闭。
+- 语义路需三者齐备：界面「高级」的向量开关（存记忆库）、embedding provider（配置 `embedding` 或环境变量）、后端可用；任一环缺失只走关键词。启动时只探测本机 `127.0.0.1` 的 Ollama / LM Studio，`MEMWEAVE_EMBEDDING_DISCOVERY=0` 可关闭。
 
 ### 向量后端
 
@@ -62,7 +62,7 @@ FTS5 前置候选（分词串，中文按二元组）
 | `builtin` | 兜底：SQLite BLOB 存向量 + JS 余弦暴力检索 |
 | `disabled` | 仅当 `MEMWEAVE_VECTOR_BACKEND=off` |
 
-加载顺序 `sqlite-vec → vectra → builtin → disabled`；任一环失败都退回关键词召回。
+加载顺序 `sqlite-vec → vectra → builtin → disabled`；任一环失败都退回关键词召回。探测结果会缓存，恢复备份后自动重新探测，避免旧缓存让检索失效。
 
 ## 5. 写入治理
 
@@ -75,6 +75,8 @@ AI 写入要过四级把关：
 
 `rules`、`soul`、人格、永久删除的操作，无论界面还是工具调用都要求人工确认。
 
+候选按风险分级：低风险自动接受（`governance.autoAcceptLowRisk`），高风险留待人工确认；冲突合并同样走这条治理管线，不绕过分级。
+
 ## 6. 遗忘与整理（dream）
 
 遗忘只改排名、不删数据：半衰期按层设置，常用条目最多延长 8 倍；时间衰减带下限（`lifecycle.decayFloor`，默认 0.1）；同话题条目反复命中会被降权。
@@ -82,7 +84,7 @@ AI 写入要过四级把关：
 整理在空闲时进行（默认空闲 180 分钟）：
 
 - 过期条目转 `stale`；
-- 长期未用的零散条目合并为摘要（`merged`，原文可恢复）；
+- 长期未用的零散条目按项目分组合并为摘要（`merged`，原文可恢复），不跨项目混合；
 - 完工超过半年的项目整体归档（`archived`，原文可恢复）；
 - `rules`、`user`、`soul` 与未到期约定永不归档。
 

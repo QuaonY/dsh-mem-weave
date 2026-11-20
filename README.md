@@ -49,7 +49,7 @@ FTS5 prefilter → keyword (BM25) + semantic + link expansion → RRF fusion
               → time decay (with floor) → diversity → rumination damping → top-k
 ```
 
-Every hit carries its reason and decay factor, visible in the UI. The semantic route needs vector search enabled (`recall.vector.enabled`) plus an embedding service; without one, recall stays keyword-only. On startup MemWeave only probes Ollama / LM Studio on local `127.0.0.1`, which `MEMWEAVE_EMBEDDING_DISCOVERY=0` disables entirely. Vector backends are layered as `sqlite-vec → vectra → builtin`, and any failure falls back to keyword recall instead of breaking retrieval.
+Every hit carries its reason and decay factor, visible in the UI. The semantic route needs the vector switch (UI **Advanced**) plus an embedding provider; without one, recall stays keyword-only. On startup MemWeave only probes Ollama / LM Studio on local `127.0.0.1`, which `MEMWEAVE_EMBEDDING_DISCOVERY=0` disables entirely. Vector backends are layered as `sqlite-vec → vectra → builtin`, and any failure falls back to keyword recall instead of breaking retrieval.
 
 ## Installation
 
@@ -79,7 +79,7 @@ The memory database lives at `$DSH_HOME/memweave/memweave.db` by default and can
 - **In-conversation commands**: `/weave status | reload | preset <id> | strict on|off | dream`, costing no tokens.
 - **Configuration**: plugin settings in `$DSH_HOME/config.json`; every key has a safe default.
 
-UI walkthrough, the full key table, environment variables, tool details and FAQ: [docs/USAGE.md](./docs/USAGE.md). Layers and injection internals: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+UI walkthrough, the common config keys, environment variables, tool details and FAQ: [docs/USAGE.md](./docs/USAGE.md). Layers and injection internals: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Security and privacy
 
@@ -114,7 +114,7 @@ npm pack            # build a local tgz
 | `src/client` | UI |
 | `src/privacy` | Sensitive detection and redaction |
 | `src/presets` | Built-in personas |
-| `test` / `bench` | Tests and recall benchmarks |
+| `test` | Tests and recall benchmarks (benchmark suite in `test/bench`) |
 
 Bundled dependency versions are pinned in `scripts/vendor-pins.mjs`. Releases run through `.github/workflows/release.yml`, and the tag must match the `package.json` version.
 
@@ -122,10 +122,10 @@ Bundled dependency versions are pinned in `scripts/vendor-pins.mjs`. Releases ru
 
 | Document | Contents |
 | --- | --- |
-| [docs/USAGE.md](./docs/USAGE.md) | Install, full config table, env vars, UI, tools, CLI, FAQ |
+| [docs/USAGE.md](./docs/USAGE.md) | Install, common config keys, env vars, UI, tools, CLI, FAQ |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, three-section injection, recall pipeline, write governance, data layout |
 | [docs/PRIVACY.md](./docs/PRIVACY.md) | Sensitive data handling, permission boundary, encrypted backup, known limits |
-| [CHANGELOG.md](./CHANGELOG.md) | Release notes (current version only) |
+| [CHANGELOG.md](./CHANGELOG.md) | Release notes per published version (release bodies are extracted from it) |
 | [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) | Third-party components and licenses |
 
 ## Links

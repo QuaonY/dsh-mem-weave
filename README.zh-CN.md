@@ -49,7 +49,7 @@ FTS5 前置候选 → 关键词(BM25) + 语义 + 链接扩展 → RRF 融合
              → 时间衰减（带下限）→ 去同质 → 反刍抑制 → top-k
 ```
 
-每条结果带命中原因与衰减系数，界面里能看；语义路需要开启向量检索（`recall.vector.enabled`）并配置 embedding 服务，没配置时只走关键词。启动时只会探测本机 `127.0.0.1` 上的 Ollama / LM Studio，设 `MEMWEAVE_EMBEDDING_DISCOVERY=0` 可完全关闭。向量后端按 `sqlite-vec → vectra → builtin` 分层，任一环失败都退回关键词，不会让检索不可用。
+每条结果带命中原因与衰减系数，界面里能看；语义路需要在界面「高级」开启向量开关并配置 embedding 服务，没配置时只走关键词。启动时只会探测本机 `127.0.0.1` 上的 Ollama / LM Studio，设 `MEMWEAVE_EMBEDDING_DISCOVERY=0` 可完全关闭。向量后端按 `sqlite-vec → vectra → builtin` 分层，任一环失败都退回关键词，不会让检索不可用。
 
 ## 安装
 
@@ -79,7 +79,7 @@ dsh plugin --profile desktop add file:<tgz 的完整路径>
 - **对话内命令**：`/weave status | reload | preset <id> | strict on|off | dream`，不消耗 token。
 - **配置**：写在 `$DSH_HOME/config.json` 的插件配置里，全部键可缺省。
 
-界面用法、配置键全表、环境变量、工具说明与常见问题见 [docs/USAGE.md](./docs/USAGE.md)；分层与注入机制见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+界面用法、常用配置键、环境变量、工具说明与常见问题见 [docs/USAGE.md](./docs/USAGE.md)；分层与注入机制见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 
 ## 安全与隐私
 
@@ -114,7 +114,7 @@ npm pack            # 打本地 tgz
 | `src/client` | 界面 |
 | `src/privacy` | 敏感检测与脱敏 |
 | `src/presets` | 内置人格 |
-| `test` / `bench` | 测试与召回基准 |
+| `test` | 测试与召回基准（基准套件在 `test/bench`） |
 
 随包依赖的版本固定在 `scripts/vendor-pins.mjs`；发布由 `.github/workflows/release.yml` 完成，tag 必须与 `package.json` 的版本一致。
 
@@ -122,10 +122,10 @@ npm pack            # 打本地 tgz
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/USAGE.md](./docs/USAGE.md) | 安装、配置全表、环境变量、界面、工具、命令行、常见问题 |
+| [docs/USAGE.md](./docs/USAGE.md) | 安装、常用配置键、环境变量、界面、工具、命令行、常见问题 |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分层、三段注入、检索流水线、写入治理、整理与数据存放 |
 | [docs/PRIVACY.md](./docs/PRIVACY.md) | 敏感信息处理、权限边界、备份加密、已知边界 |
-| [CHANGELOG.md](./CHANGELOG.md) | 版本说明（只保留当前版本） |
+| [CHANGELOG.md](./CHANGELOG.md) | 各已发布版本说明（发布正文取自对应版本段） |
 | [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) | 第三方组件与许可证 |
 
 ## 相关链接
