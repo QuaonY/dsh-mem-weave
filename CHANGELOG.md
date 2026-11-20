@@ -1,10 +1,35 @@
-# Changelog
+# Changelog / 更新日志
 
-本文件记录 MemWeave 各已发布版本的说明，自第一个正式版本 **v1.0.0** 起；此前开发中间版本不再保留。发布页正文取自本文件对应版本段，已发布的页面不会随本文件后续编辑自动更新。
+All notable changes to MemWeave are recorded here, newest first. Each release appends one section; the release pipeline extracts the matching section as the Release body. Published release pages do not auto-update when this file is edited later. Records start at **v1.0.0**, the first stable release; earlier development versions are not retained.
 
-格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。各版本统一为「一句概述 + 按用户影响分组的要点」。
+每个版本的变更都记录在此，最新在前。每次发版追加一节；发布流水线自动抽取对应版本章节作为 Release 说明。已发布的页面不会随本文件后续编辑自动更新。自第一个正式版本 **v1.0.0** 起记录，此前开发中间版本不再保留。
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/). Each section lists English first, then Chinese under a "中文" line.
+
+格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。每节英文在前，「中文」行之后为中文。
+
+## [1.0.4] - 2026-11-20
+
+Fixes known issues and improves the user experience.
+
+中文
+
+修复已知问题，优化用户体验。
 
 ## [1.0.3] - 2026-11-20
+
+A focused round of fixes for 13 high-severity issues found in a full audit, covering privacy, write governance, recall, extraction, vectors and the UI:
+
+- Privacy: settings queries no longer return apiKey in plaintext; turn notices carry only redacted summaries and are scoped to the current session.
+- Write governance: conflict merges go through the governance pipeline (risk tiers + human confirmation); archive rewrites no longer hit unique constraints; cold merges are grouped per project instead of leaking across projects.
+- Recall & injection: the user profile is wired into first-turn injection; Chinese numerals are parsed as whole spans ("十三楼" → 13) so words like "十分" / "万一" are no longer mangled.
+- Extraction: candidates are persisted by risk tier — low risk auto-accepted, high risk left for confirmation — instead of creating candidates without writing memories.
+- Profile: confidence uses the 1–5 importance scale, so high-importance memories become "observed" preferences sooner.
+- Vectors: the backend is re-probed after a backup restore so recall keeps working; partial vector-config updates no longer clear existing values or trigger needless reindexing.
+- UI & persona: textarea/checkbox DOM properties fixed; session-level persona overrides no longer pollute the global persona.
+- Turn notices: duplicate turn-stopping events within the same millisecond no longer send duplicate cards.
+
+中文
 
 集中修复一轮全量审查发现的 13 项高危问题，覆盖隐私、写入治理、召回、抽取、向量与界面：
 
@@ -19,6 +44,13 @@
 
 ## [1.0.2] - 2026-11-17
 
+Fixes the memory badge next to the input box crashing on mount under DSH 0.2.x (`Cannot set property "container" without provide`):
+
+- The badge no longer writes `container` onto the protected plugin-context copy; the slot container is passed directly.
+- Fallbacks added: fall back to `document.body` when no container is readable; skip silently when RPC is not ready or the current turn is unavailable, leaving no unhandled exceptions.
+
+中文
+
 修复输入框旁的记忆徽章在 DSH 0.2.x 上挂载即报错的问题（`Cannot set property "container" without provide`）：
 
 - 不再往受保护的插件上下文副本上写 `container`，插槽容器直接传给徽章。
@@ -26,12 +58,40 @@
 
 ## [1.0.1] - 2026-11-17
 
+Improves the overall memory flow and vector recall:
+
+- The write → consolidate → recall chain is more coherent, making cross-session continuity feel natural.
+- Vector recall hits and stability improve; semantic results stay closer to the current topic.
+
+中文
+
 优化记忆的整体流程与向量检索：
 
 - 记忆从写入、整理到召回的链路更连贯，跨会话的延续更自然。
 - 向量检索的命中与稳定性有所提升，语义路的结果更贴近当前话题。
 
 ## [1.0.0] - 2026-11-17
+
+First stable release: long-term memory, persona, write governance, privacy protection and recall engineering in one out-of-the-box DSH plugin.
+
+- Memory layers: seven layers (`soul` / `user` / `rules` / `project` / `fact` / `lesson` / `topic`), each with its own half-life and injection priority; three injection sections (persona nine-block, first-turn snapshot, later deltas + recall) with separate budgets that never squeeze each other.
+- Persona: editable, previewable, version-rollbackable; two original built-in personas (Xiaoman, Lin He · Night-Shift Repair Shop) with preset support; prompt language switchable (`zh` / `en`), UI and injection share the same source.
+- User profile: preferences, goals, communication style and boundaries aggregated from `user` / `soul` / `fact` / `project`, correctable or deletable item by item.
+- Promises & dates: due promises, birthdays, anniversaries and lunar festivals surface ahead of time; pending promises are never consolidated away.
+- Recall: FTS5 prefilter → BM25 keyword + semantic + link expansion → RRF fusion → time decay (with floor) → diversity → rumination damping → top-k, every hit carrying an explainable trace.
+- Vectors: four backend tiers (`sqlite-vec` / `vectra` / `builtin` / `disabled`), any failure falls back to keyword; the semantic route needs the vector switch (UI Advanced) plus an embedding provider, supports OpenAI-compatible HTTP services, probes local Ollama / LM Studio when unconfigured (`127.0.0.1` only, disable with `MEMWEAVE_EMBEDDING_DISCOVERY=0`); ONNX local models download once and run offline, with mirror fallback when the official source is unreachable.
+- Write governance: four gates (source detection, dedup & merge, conflict freeze, audit trail); conflicts freeze in the candidate pool and only merge or replace after confirmation, never overwriting old conclusions.
+- Human-only operations: editing persona, changing `rules` / `soul`, adjudicating conflicts and permanent deletion are human-only; overreaching AI calls get `E_PERM`.
+- Undo: a 24-hour window covers writes, edits, merges and consolidation, with a complete audit trail.
+- Idle consolidation (dream): expired entries turn `stale`, cold memories merge into summaries, projects finished six months ago archive whole, originals recoverable; `process_lease` keeps consolidation and vector indexing single-process per database.
+- Privacy: keys, tokens and passwords are blocked on write; eight other sensitive kinds (phone, email, ID card, credit card, IP, address, …) are field-redacted by default before injection, switchable to whole-entry filtering, and never enter the vector index.
+- Injection & logs: special brackets and newlines are stripped before injection to prevent forged sections; logs never contain memory bodies.
+- Backup: AES-256-GCM + scrypt with sidecar verification; tampering or a wrong passphrase fails immediately; legacy CBC backups still decrypt.
+- UI: nine pages (Overview, Persona, Memory, User Profile, Candidates & conflicts, Injection & budget, Governance & audit, Backup, Advanced); a post-turn "what was remembered" card; recall shows hit reasons and decay factors; injection previewable verbatim and comparable with what was actually injected; dangerous actions need a typed confirmation word; long lists virtual-scroll; audit displays redacted by default.
+- Tools & commands: 22 `weave_*` tools covering write, recall, consolidation, governance, persona and profile, rejecting out-of-permission operations; in-conversation `/weave status | reload | preset <id> | strict on|off | dream`; CLI ops via `node scripts/weave.mjs status | render | persona | reset`.
+- Engineering: zero runtime dependencies, no install-time scripts; local inference (transformers + onnxruntime) and vectra bundled in `lib/vendor`, five-platform sqlite-vec extensions in `lib/native`, versions pinned in `scripts/vendor-pins.mjs`, licenses summarized in `THIRD_PARTY_NOTICES.md`; CPU-only inference (onnxruntime ships no Intel Mac inference library), no GPU acceleration files bundled; ~70 MB install package, model weights download on first use; Node ≥ 22.13 required; `pnpm conformance` and `pnpm bench:guard` run in CI.
+
+中文
 
 首个正式版本：把长期记忆、人格、写入治理、隐私保护与检索工程合成一个开箱即用的 DSH 插件。
 
