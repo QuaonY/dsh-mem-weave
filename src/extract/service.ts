@@ -14,6 +14,7 @@ import {
   assessQuality,
 } from "./extractor";
 import { insertCandidate, newId, type CandidateRow } from "../store/dao";
+import { writeMemory } from "../store/govern";
 import { searchMemoryFTS } from "../store/fts";
 import { searchSimilar } from "../store/vector";
 import { LAYER_TABLES } from "../store/schema";
@@ -90,6 +91,9 @@ export async function extractMemories(
     };
 
     for (const item of extractedItems) {
+      // LLM 可能返回不存在的层级（如 "memory"）；回落到配置的目标层级
+      const level: Level = LAYER_TABLES[item.level] ? item.level : config.targetLevel;
+
       // 4.1 评估质量
       const quality = assessQuality(item.content, item.keywords, item.confidence);
       
@@ -115,7 +119,7 @@ export async function extractMemories(
       // 4.2 去重检查
       const isDuplicate = await checkDuplicate(
         env,
-        item.level,
+        level,
         item.content,
         item.keywords,
         dedupeThreshold
@@ -127,26 +131,21 @@ export async function extractMemories(
       }
 
       // 4.3 风险评估
-      const highRisk = isHighRisk(item.level, item.content, item.keywords);
-      
+      const highRisk = isHighRisk(level, item.content, item.keywords);
+
       if (highRisk) {
         qualityStats.highRisk++;
       }
 
-      // 4.4 创建候选
+      // 4.4 高风险进候选池等人工审核；低风险走完整治理管线真正落库
       const now = Date.now();
-      const metadata = {
-        quality,
-        confidence: item.confidence,
-        reason: item.reason,
-        l0MessageIds: result.messageIds,
-        trigger: options.trigger,
-      };
+      const importance = Math.max(1, Math.min(5, Math.round(item.confidence * 5)));
+      const reason = `Auto-extracted (${options.trigger}): ${item.reason}. Quality=${quality.toFixed(2)}, Confidence=${item.confidence}`;
 
       // 证据回溯 - 将 L0 消息作为证据
       const evidence: Evidence[] = result.messageIds.map(msgId => {
         // Extract session ID and seq from L0 message
-        const l0Msg = env.db.prepare("SELECT session_id, seq, content FROM l0_messages WHERE id = ?").get(msgId) as 
+        const l0Msg = env.db.prepare("SELECT session_id, seq, content FROM l0_messages WHERE id = ?").get(msgId) as
           { session_id: string; seq: number; content: string } | undefined;
         return {
           sessionId: l0Msg?.session_id ?? "unknown",
@@ -155,33 +154,71 @@ export async function extractMemories(
         };
       });
 
-      const candidate: CandidateRow = {
+      const base: Omit<CandidateRow, "verdict" | "risk" | "mergedInto" | "decidedAt" | "decidedBy"> = {
         id: newId(),
-        level: item.level,
+        level,
         project: null,
         content: item.content,
         keywords: item.keywords,
-        importance: 50, // Default importance
+        importance,
         semanticKey: null,
-        evidence,  // L0 消息作为证据
-        tier: "hot", // Extract candidates go through L2 review
-        verdict: highRisk ? "pending" : "accepted",
-        risk: highRisk ? "high" : "low",
-        reason: `Auto-extracted (${options.trigger}): ${item.reason}. Quality=${quality.toFixed(2)}, Confidence=${item.confidence}`,
-        mergedInto: null,
+        evidence,
+        tier: "hot",
+        reason,
         createdAt: now,
-        decidedAt: highRisk ? null : now,
-        decidedBy: highRisk ? null : "extract",
         patch: undefined,
       };
 
-      insertCandidate(env, candidate);
-
-      result.candidatesCreated++;
-      
-      if (!highRisk) {
-        result.autoAccepted++;
+      if (highRisk) {
+        insertCandidate(env, {
+          ...base,
+          verdict: "pending",
+          risk: "high",
+          mergedInto: null,
+          decidedAt: null,
+          decidedBy: null,
+        });
+        result.candidatesCreated++;
+        continue;
       }
+
+      const out = await writeMemory(
+        env,
+        {
+          level,
+          content: item.content,
+          keywords: item.keywords,
+          importance,
+          evidence,
+          source: "extract",
+          sessionTag: sessionId,
+          tier: "hot",
+        },
+        "agent"
+      );
+
+      if (out.verdict === "pending") {
+        // 治理已建 L2 候选（近似替换/需确认），不重复建抽取候选
+        result.candidatesCreated++;
+        continue;
+      }
+      if (!out.ok || (out.verdict !== "accepted" && out.verdict !== "merged")) {
+        // 治理拒绝（如敏感凭据）：不落库也不建候选
+        result.skipped++;
+        continue;
+      }
+
+      // 落库成功：保留 accepted 候选记录做溯源，mergedInto 指向实际记忆
+      insertCandidate(env, {
+        ...base,
+        verdict: "accepted",
+        risk: "low",
+        mergedInto: out.id ?? null,
+        decidedAt: now,
+        decidedBy: "extract",
+      });
+      result.candidatesCreated++;
+      result.autoAccepted++;
     }
 
     // 5. 添加质量指标

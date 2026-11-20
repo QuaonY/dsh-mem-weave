@@ -17,6 +17,7 @@ import type { WeaveService } from "../src/host/service";
 import type { WeaveEnv } from "../src/store/db";
 import { WeaveService as WeaveServiceClass, defaultConfig } from "../src/host/service";
 import { openWeaveDb } from "../src/store/db";
+import { DEFAULT_PROFILE_CONFIG } from "../src/profile/types";
 
 interface FakeCommand {
   name: string;
@@ -279,6 +280,10 @@ describe("首轮记忆可用性", () => {
       "human"
     );
     expect(w.ok).toBe(true);
+
+    // 画像是对 user/soul/fact/project 的独立聚合（有自己的取材与置信度规则），
+    // 这里验证的是 S2 快照的 tier 边界，故关掉画像单独检验快照
+    service.config.profile = { ...DEFAULT_PROFILE_CONFIG, enabled: false };
 
     const turn = service.renderTurn({
       sessionId: "test-non-core",

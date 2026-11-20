@@ -164,4 +164,39 @@ describe("轮后通知 turn notice", () => {
     expect(notice.summary).toBe("MemWeave: 1 written, 1 organized");
     expect(notice.body).toContain("will expire soon");
   });
+
+  it("别的会话的写入不进本会话卡片；无会话归属的系统动作仍可见", async () => {
+    plugin.apply(makeCtx(), { dataDir: dir });
+    const service = plugin.runtime()!.service;
+    const since = Date.now() - 1;
+    const mine = await service.remember({ level: "fact", content: "本会话写入的事实" }, "agent", { sessionId: "session-notice" });
+    const other = await service.remember({ level: "fact", content: "别的会话写入的秘密" }, "agent", { sessionId: "session-other" });
+    const global = await service.remember({ level: "fact", content: "无会话归属的写入" }, "agent");
+    expect(mine.ok && other.ok && global.ok).toBe(true);
+
+    const notice = buildTurnNotice(service.env, since, "zh", { enabled: true }, "session-notice");
+    expect(notice.enabled).toBe(true);
+    expect(notice.body).toContain("本会话写入的事实");
+    expect(notice.body).toContain("无会话归属的写入");
+    expect(notice.body).not.toContain("别的会话写入的秘密");
+    expect(notice.summary).toBe("忆织：本轮写入 2 条");
+  });
+
+  it("卡片正文里的 PII 先脱敏再给模型看", async () => {
+    plugin.apply(makeCtx(), { dataDir: dir });
+    const service = plugin.runtime()!.service;
+    // 用户关掉手机号拦截（非锁定规则允许关）：写入放行，但通知边界仍须脱敏
+    service.config.governance.disabledSensitive = ["phone"];
+    const { agent, appended } = makeAgent();
+
+    await startTurn(agent, 1);
+    const out = await service.remember({ level: "user", content: "用户的联系方式是13812345678，喜欢简洁回复" }, "agent", { sessionId: "session-notice" });
+    expect(out.ok).toBe(true);
+    await stopTurn(agent, 1);
+
+    expect(appended).toHaveLength(1);
+    const body = appended[0].data.content[0].text;
+    expect(body).not.toContain("13812345678");
+    expect(body).toContain("喜欢简洁回复");
+  });
 });

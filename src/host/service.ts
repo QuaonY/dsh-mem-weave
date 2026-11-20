@@ -2402,6 +2402,8 @@ export class WeaveService {
       const safetyBackup = await this.env.withExclusive(() => this.env.backup("before-restore"));
       await this.env.withExclusive(() => this.env.restoreFromBackup(selected.path));
       ensureSchema(this.env);
+      // 库文件已整体替换：进程级后端缓存（sqlite-vec 加载源/vectra 索引）指向旧库，必须重探
+      resetBackendDetection();
       await this.env.withWrite(() => addAudit(this.env, {
         actor,
         action: "backup.restore",

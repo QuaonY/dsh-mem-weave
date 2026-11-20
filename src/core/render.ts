@@ -33,6 +33,8 @@ export interface RenderInput {
   promises?: string[];
   /** 用户画像注入（300-600 字简要画像） */
   userProfile?: string;
+  /** 首轮渲染：画像只随首轮 S2 注入；stableContext 始终含画像（缺省视为首轮） */
+  firstTurn?: boolean;
   /** 提示词语言（从 config.promptLang 传入） */
   promptLang?: "zh" | "en";
 }
@@ -373,7 +375,7 @@ export function renderS2Full(
     return x.id < y.id ? -1 : x.id > y.id ? 1 : 0;
   });
   
-  // 画像移到稳定上下文，S2 只保留数据规范说明
+  // 画像块由 renderAll 统一追加在快照之后，这里只出数据规范说明 + 条目
   const header = tpl.snapshot + "\n" + tpl.dataNote;
   
   const out = fitLines(header, picked.map(entryLine), b.snapshotMaxChars, tpl.omitted);
@@ -564,13 +566,23 @@ export function renderAll(input: RenderInput): RenderResult {
   const s2 = renderS2Full(input.snapshotItems, input.budget, lang);
   const s3 = renderS3Full(input.delta, input.recallHits, input.quotes, input.budget, input.promises, lang);
 
+  // 画像并入 S2 正文：真实注入走 s1/s2/s3，只放 stableContext 的话画像永远到不了模型。
+  // 只随首轮 S2 注入一次；stableContext 跨轮都含画像（保护 prompt cache 的预览口径）
+  const tpl = promptTemplates(lang);
+  const profileRaw = sanitizeData((input.userProfile ?? "").trim());
+  const profileBlock = profileRaw ? tpl.userProfile + "\n\n" + profileRaw : "";
+  const s2Text =
+    profileBlock && input.firstTurn !== false
+      ? (s2.text ? s2.text + "\n\n" + profileBlock : profileBlock)
+      : s2.text;
+
   const s1Text = [s1.prefix, s1.thinking, s1.suffix].filter((s) => s.length > 0).join("\n\n");
   const segments: RenderSegment[] = [
     { name: "s1-persona", text: s1Text, chars: s1Text.length, items: s1.blocks.length, trimmed: 0 },
     { 
       name: "s2-snapshot", 
-      text: s2.text, 
-      chars: s2.text.length, 
+      text: s2Text, 
+      chars: s2Text.length, 
       items: s2.items, 
       trimmed: s2.trimmed,
       trimmedIds: s2.trimmedIds,
@@ -622,24 +634,21 @@ export function renderAll(input: RenderInput): RenderResult {
   const stableParts: string[] = [];
   if (s1.prefix) stableParts.push(s1.prefix);
   if (s1.thinking) stableParts.push(s1.thinking);
-  if (input.userProfile && input.userProfile.trim().length > 0) {
-    const tpl = promptTemplates(lang);
-    stableParts.push(tpl.userProfile + "\n\n" + input.userProfile);
-  }
+  if (profileBlock) stableParts.push(profileBlock);
   const stableContext = stableParts.length > 0 ? stableParts.join("\n\n") : "";
 
   // 动态上下文：S2 快照（首轮）+ S3 增量/召回（后续轮）
   const dynamicParts: string[] = [];
-  if (s2.text) dynamicParts.push(s2.text);
+  if (s2Text) dynamicParts.push(s2Text);
   if (s3.text) dynamicParts.push(s3.text);
   const dynamicContext = dynamicParts.join("\n\n");
 
   return {
     s1: { prefix: s1.prefix, thinking: s1.thinking, suffix: s1.suffix },
-    s2: s2.text,
+    s2: s2Text,
     s3: s3.text,
     segments,
-    hash: renderHash([s1.prefix, s1.thinking, s1.suffix, s2.text, s3.text]),
+    hash: renderHash([s1.prefix, s1.thinking, s1.suffix, s2Text, s3.text]),
     warn,
     trace,
     stableContext,

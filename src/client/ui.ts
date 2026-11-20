@@ -92,6 +92,10 @@ export function el<K extends keyof HTMLElementTagNameMap>(
       if (v === undefined || v === null) continue;
       if (k === "class") node.className = String(v);
       else if (k === "text") node.textContent = String(v);
+      // value/checked 必须走 DOM 属性：setAttribute("value") 对 textarea 无效，
+      // setAttribute("checked", "false") 反而会让复选框选中
+      else if (k === "value" && "value" in node) (node as HTMLInputElement).value = String(v);
+      else if (k === "checked" && "checked" in node) (node as HTMLInputElement).checked = Boolean(v);
       else if (k.startsWith("on") && typeof v === "function") {
         node.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
       } else node.setAttribute(k, String(v));

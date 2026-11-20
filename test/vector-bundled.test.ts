@@ -22,6 +22,7 @@ import {
   bundledVecPath,
   detectBestBackend,
   ensureVectorTables,
+  getVectorBackend,
   resetBackendDetection,
   searchVectors,
   storeEmbedding,
@@ -255,5 +256,24 @@ describe.skipIf(!canLoad)("内置 sqlite-vec：真实加载与检索", () => {
     expect(ids({ level: "fact", project: "alpha" })).toEqual([factAlpha.id]);
     // 空字符串 = 只匹配无项目的记忆
     expect(ids({ project: "" })).toEqual([]);
+  });
+
+  it("恢复备份后向量后端重新探测，检索仍可用", async () => {
+    open();
+    const service = new WeaveService(env, defaultConfig(tmpDir));
+    expect(detectBestBackend(env)).toBe("sqlite-vec");
+
+    const cat = createEntry("用户喜欢猫");
+    insertMemory(env, cat);
+    storeEmbedding(env, cat.id, "fact", new Float32Array([1, 0, 0, 0]));
+
+    const backupPath = env.backup("vec-restore-test");
+    const result = await service.restoreBackup(backupPath, "test");
+    expect(result.ok).toBe(true);
+
+    // restoreFromBackup 换了新连接：缓存不复位就会在新连接上直接查 vec0 而报错
+    expect(getVectorBackend(env)).toBe("sqlite-vec");
+    const hits = searchVectors(env, new Float32Array([1, 0, 0, 0]), { topK: 3, minScore: 0.9 });
+    expect(hits.map((h) => h.id)).toEqual([cat.id]);
   });
 });

@@ -28,9 +28,11 @@ import {
   insertMemory,
   listRecentByLevel,
   newId,
+  restoreMemory,
   type CandidateRow,
   type ConflictRow,
 } from "./dao";
+import { LAYER_TABLES } from "./schema";
 import { LEVEL_ORDER } from "../core/types";
 
 export interface WriteInput {
@@ -211,6 +213,8 @@ function writeMemorySync(env: WeaveEnv, input: WriteInput, actor: Actor): WriteO
       target: extra.target ?? "-",
       after: content.slice(0, 200),
       reason: (o.code ?? "ok") + (extra.reason ? " / " + extra.reason : ""),
+      // 轮后通知按会话圈定窗口；sessionTag 形如 `<sessionId>#<turn>`
+      sessionId: input.sessionTag ? input.sessionTag.split("#")[0] : undefined,
     });
   };
 
@@ -244,6 +248,19 @@ function writeMemorySync(env: WeaveEnv, input: WriteInput, actor: Actor): WriteO
   if (dup) {
     const o: WriteOutcome = { ok: true, deduped: true, id: dup.id, verdict: "accepted" };
     audit(o, { reason: "dedupe", target: dup.id });
+    return o;
+  }
+
+  // 同层 archived/stale 行也占着 hash 唯一索引（ux_<table>_hash 不分状态），
+  // 直接 INSERT 必撞约束。重写归档内容 = 恢复旧行，按去重命中返回。
+  const occupied = env.db
+    .prepare("SELECT id, status FROM " + LAYER_TABLES[input.level] + " WHERE hash = ? AND status != 'active'")
+    .get(hash) as { id: string; status: string } | undefined;
+  if (occupied) {
+    restoreMemory(env, occupied.id, actor);
+    appendUndo(env, { actor, action: "memory.update", target: occupied.id, payload: { before: { status: occupied.status } } });
+    const o: WriteOutcome = { ok: true, deduped: true, id: occupied.id, verdict: "accepted" };
+    audit(o, { reason: "dedupe-restore", target: occupied.id });
     return o;
   }
 

@@ -430,11 +430,22 @@ export function runDream(
     const mergedFrom: string[] = [];
     const projectFolds: ProjectFold[] = [];
     if (cfg.mergeOnDream !== false) {
-      if (cold.length >= 2) {
+      // 冷条目按项目分组（无项目的一组）各自折叠：
+      // 此前全部并成一条摘要并标 cold[0].project，会把别的项目的记忆错标进来
+      const coldByProject = new Map<string, MemoryEntry[]>();
+      for (const e of cold) {
+        const p = e.project && e.project.trim().length > 0 ? e.project : null;
+        const key = p ?? "";
+        const arr = coldByProject.get(key) ?? [];
+        arr.push(e);
+        coldByProject.set(key, arr);
+      }
+      for (const [key, members] of coldByProject) {
+        if (members.length < 2) continue;
         heartbeatDreamLease(env, actor, now, leaseMs);
-        topicId = foldInto(env, cold, "冷记忆合并", cold[0].project, actor, now);
-        for (const e of cold) mergedFrom.push(e.id);
-        merged += cold.length;
+        topicId = foldInto(env, members, "冷记忆合并", key === "" ? null : key, actor, now);
+        for (const e of members) mergedFrom.push(e.id);
+        merged += members.length;
       }
       for (const [project, members] of dormant) {
         heartbeatDreamLease(env, actor, now, leaseMs);

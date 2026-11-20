@@ -360,7 +360,9 @@ export function appendTurnNotice(service: WeaveService, agent: unknown, warn: (m
   if (since === undefined) return false;
   try {
     const cfg = service.config.governance?.turnNotice ?? { enabled: true };
-    const notice = buildTurnNotice(service.env, since, service.config.promptLang ?? "zh", cfg);
+    const a = agent as { id?: unknown; session?: { id?: unknown } };
+    const sessionId = String(a.session?.id ?? a.id ?? "") || undefined;
+    const notice = buildTurnNotice(service.env, since, service.config.promptLang ?? "zh", cfg, sessionId);
     if (!notice.enabled) return false;
     // 同一轮里 turn-stopping 可能再次触发：窗口前移，避免重复计数。
     // +1 让边界严格晚于本轮通知：否则第二次触发与写入落在同一毫秒时，

@@ -15,7 +15,7 @@ import {
   resetOptionalDepCache,
   setOptionalDepResolver,
 } from "../src/store/vector-loader";
-import { detectBestBackend, getVectorBackend, resetBackendDetection, setVectorConfig } from "../src/store/vector";
+import { detectBestBackend, getVectorBackend, getVectorConfig, resetBackendDetection, setVectorConfig } from "../src/store/vector";
 import { insertMemory, newId } from "../src/store/dao";
 import type { MemoryEntry } from "../src/core/types";
 import { WeaveService, defaultConfig } from "../src/host/service";
@@ -280,6 +280,83 @@ describe("vector-loader：后端可用 ≠ 功能开启", () => {
       expect(r.ok).toBe(true);
       expect(r.enqueued).toBe(2);
       expect(jobCount()).toBe(2);
+    } finally {
+      env.db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("setVectorConfig：部分更新不清空现值", () => {
+  function open() {
+    const dir = mkdtempSync(join(tmpdir(), "weave-vec-cfg-"));
+    const env = openWeaveDb(dir, { readonly: false });
+    ensureSchema(env);
+    return { dir, env };
+  }
+
+  function reindexFlag(env: WeaveEnv): number {
+    const row = env.db.prepare("SELECT needs_reindex FROM vector_config WHERE id = 1").get() as
+      | { needs_reindex: number }
+      | undefined;
+    return row?.needs_reindex ?? 0;
+  }
+
+  it("只改 enabled 时 dimensions/provider/model 沿用现值", () => {
+    const { dir, env } = open();
+    try {
+      setVectorConfig(env, {
+        enabled: true,
+        dimensions: 768,
+        provider: "openai-compatible",
+        model: "text-embedding-3-small",
+      });
+      setVectorConfig(env, { enabled: false });
+
+      const cfg = getVectorConfig(env)!;
+      expect(cfg.enabled).toBe(false);
+      expect(cfg.dimensions).toBe(768);
+      expect(cfg.provider).toBe("openai-compatible");
+      expect(cfg.model).toBe("text-embedding-3-small");
+    } finally {
+      env.db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("无关更新不误触发也不清掉 needs_reindex", () => {
+    const { dir, env } = open();
+    try {
+      setVectorConfig(env, { enabled: true, dimensions: 384, provider: "ollama", model: "nomic-embed-text" });
+      expect(reindexFlag(env)).toBe(0);
+
+      // 只开关 enabled：不应被当成换模型
+      setVectorConfig(env, { enabled: false });
+      expect(reindexFlag(env)).toBe(0);
+
+      // 换维度：置位
+      setVectorConfig(env, { dimensions: 1024 });
+      expect(reindexFlag(env)).toBe(1);
+
+      // 之后的无关更新不能把挂起的重建标记清掉
+      setVectorConfig(env, { enabled: true });
+      expect(reindexFlag(env)).toBe(1);
+      expect(getVectorConfig(env)!.dimensions).toBe(1024);
+    } finally {
+      env.db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("首次部分写入用缺省值", () => {
+    const { dir, env } = open();
+    try {
+      setVectorConfig(env, { enabled: true });
+      const cfg = getVectorConfig(env)!;
+      expect(cfg.enabled).toBe(true);
+      expect(cfg.dimensions).toBe(384);
+      expect(cfg.provider).toBeUndefined();
+      expect(cfg.model).toBeUndefined();
     } finally {
       env.db.close();
       rmSync(dir, { recursive: true, force: true });

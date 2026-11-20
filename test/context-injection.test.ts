@@ -285,4 +285,44 @@ describe("真实预览", () => {
     const result3 = service.preview();
     expect(result3.hash).not.toBe(result1.hash);
   });
+
+  it("画像真的进入首轮注入的 S2，而不只是预览的 stableContext", async () => {
+    await service.remember({ level: "user", content: "我喜欢函数式编程风格" }, "human");
+    service.config.profile = {
+      enabled: true,
+      injectToS2: true,
+      s2Budget: { min: 300, max: 600 },
+      sensitiveKeywords: [],
+      inferredExpiryDays: 90,
+      minConfidence: 0.4,
+    };
+
+    const turn = service.renderTurn({ sessionId: "s-profile", first: true, baseline: new Map() });
+    expect(turn.inject).toBe(true);
+    expect(turn.s2).toContain("我对你的理解");
+    expect(turn.s2).toContain("函数式编程");
+    // 段标题只出现一次：宿主去掉注入文本自带的标题，renderAll 统一加
+    expect(turn.s2.match(/我对你的理解/g)).toHaveLength(1);
+    expect(turn.result.s2).toBe(turn.s2);
+
+    // 后续轮不重复注入画像
+    const t2 = service.renderTurn({ sessionId: "s-profile", first: false, query: "编程风格", baseline: new Map(), turn: 2 });
+    expect(t2.s2).toBe("");
+    expect(t2.s3).not.toContain("我对你的理解");
+  });
+
+  it("injectToS2 关闭时首轮 S2 不含画像", async () => {
+    await service.remember({ level: "user", content: "我喜欢喝乌龙茶" }, "human");
+    service.config.profile = {
+      enabled: true,
+      injectToS2: false,
+      s2Budget: { min: 300, max: 600 },
+      sensitiveKeywords: [],
+      inferredExpiryDays: 90,
+      minConfidence: 0.4,
+    };
+
+    const turn = service.renderTurn({ sessionId: "s-profile-off", first: true, baseline: new Map() });
+    expect(turn.s2).not.toContain("我对你的理解");
+  });
 });

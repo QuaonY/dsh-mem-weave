@@ -973,7 +973,7 @@ export function addAudit(
 
 export function queryAudit(
   env: WeaveEnv,
-  f: { actor?: string; action?: string; since?: number; limit?: number },
+  f: { actor?: string; action?: string; since?: number; limit?: number; sessionId?: string },
 ): AuditRow[] {
   const where: string[] = [];
   const params: SQLInputValue[] = [];
@@ -988,6 +988,11 @@ export function queryAudit(
   if (f.since !== undefined) {
     where.push("ts >= ?");
     params.push(f.since);
+  }
+  if (f.sessionId) {
+    // 本会话的行 + 无会话归属的系统级行（dream 整理等）；别的会话的行不进窗口
+    where.push("(session_id = ? OR session_id IS NULL)");
+    params.push(f.sessionId);
   }
   const sql =
     "SELECT * FROM audit_log" +

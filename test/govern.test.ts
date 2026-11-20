@@ -10,12 +10,16 @@ import { openWeaveDb, type WeaveEnv } from "../src/store/db";
 import { ensureSchema } from "../src/store/migrate";
 import { MERGE_THRESHOLD, scanSensitive, similar, writeMemory } from "../src/store/govern";
 import {
+  archiveMemory,
   findConflictingSemanticKey,
+  getMemory,
   getPersona,
   listCandidates,
   listConflicts,
   listMemory,
+  listUndo,
   queryAudit,
+  reviseMemory,
   updatePersona,
 } from "../src/store/dao";
 
@@ -87,6 +91,49 @@ describe("去重与近似合并", () => {
     const hits = similar(env, "主人偏爱像素风的游戏美术风格");
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].sim).toBeGreaterThan(0.9);
+  });
+
+  it("重写已归档内容 → 恢复旧行而非撞 hash 唯一约束", async () => {
+    const a = await writeMemory(env, { level: "fact", content: "部署窗口在每周五晚上" }, "human");
+    expect(a.ok).toBe(true);
+    archiveMemory(env, a.id!, "human");
+    expect(getMemory(env, a.id!)?.status).toBe("archived");
+
+    const b = await writeMemory(env, { level: "fact", content: "部署窗口在每周五晚上" }, "agent");
+    expect(b.ok).toBe(true);
+    expect(b.deduped).toBe(true);
+    expect(b.id).toBe(a.id);
+    expect(getMemory(env, a.id!)?.status).toBe("active");
+    expect(listMemory(env, {})).toHaveLength(1);
+
+    // 撤销台账能把状态还原回归档
+    const row = listUndo(env, 0).find((u) => u.action === "memory.update" && u.target === a.id);
+    expect(row).toBeDefined();
+    expect(JSON.parse(row!.payload).before.status).toBe("archived");
+  });
+
+  it("重写 stale 内容同样恢复，且台账记录原状态 stale", async () => {
+    const a = await writeMemory(env, { level: "fact", content: "构建产物输出到 dist 目录" }, "human");
+    expect(a.ok).toBe(true);
+    expect(reviseMemory(env, a.id!, { status: "stale" }, "human").ok).toBe(true);
+
+    const b = await writeMemory(env, { level: "fact", content: "构建产物输出到 dist 目录" }, "agent");
+    expect(b.ok).toBe(true);
+    expect(b.id).toBe(a.id);
+    expect(getMemory(env, a.id!)?.status).toBe("active");
+
+    const row = listUndo(env, 0).find((u) => u.action === "memory.update" && u.target === a.id);
+    expect(JSON.parse(row!.payload).before.status).toBe("stale");
+  });
+
+  it("归档行只占本层唯一索引：跨层写同内容不受影响", async () => {
+    const a = await writeMemory(env, { level: "fact", content: "缓存过期时间是三十分钟" }, "human");
+    archiveMemory(env, a.id!, "human");
+    const b = await writeMemory(env, { level: "lesson", content: "缓存过期时间是三十分钟" }, "human");
+    expect(b.ok).toBe(true);
+    expect(b.id).not.toBe(a.id);
+    expect(getMemory(env, a.id!)?.status).toBe("archived");
+    expect(getMemory(env, b.id!)?.status).toBe("active");
   });
 });
 

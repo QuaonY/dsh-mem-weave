@@ -81,6 +81,12 @@ function obj(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
 }
 
+// settings/get 与 defaults 对 agent 可读：凭据只报有无、绝不回显（与 status 接口同一不变量）
+function redactConfigSecrets(config: WeaveService["config"]): WeaveService["config"] {
+  if (!config.embedding?.apiKey) return config;
+  return { ...config, embedding: { ...config.embedding, apiKey: "" } };
+}
+
 function mergeSettings(current: unknown, patch: unknown): unknown {
   const base = obj(current);
   const next = obj(patch);
@@ -1016,7 +1022,7 @@ export const RPC_METHODS: RpcMethod[] = [
     method: "get",
     humanOnly: false,
     parameters: { type: "object", properties: {} },
-    handler: (s) => s.config,
+    handler: (s) => redactConfigSecrets(s.config),
   },
   {
     // 设置页「恢复默认」：出厂值 = 插件配置 + 内置默认（不含设置页保存过的 settings.json）
@@ -1024,7 +1030,7 @@ export const RPC_METHODS: RpcMethod[] = [
     method: "defaults",
     humanOnly: false,
     parameters: { type: "object", properties: {} },
-    handler: (s) => s.defaults ?? defaultConfig(s.env.dataDir),
+    handler: (s) => redactConfigSecrets(s.defaults ?? defaultConfig(s.env.dataDir)),
   },
   {
     ns: "settings",

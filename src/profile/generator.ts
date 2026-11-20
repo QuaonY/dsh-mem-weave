@@ -7,23 +7,28 @@ import type { WeaveEnv } from "../store/db";
 import type { Level, MemoryEntry } from "../core/types";
 import type { UserProfile, ProfileItem, ProfileConfig, ProfileSource, ProfileBasis, ProfileCategory } from "./types";
 import { DEFAULT_PROFILE_CONFIG } from "./types";
+import { listConflicts } from "../store/dao";
 
 /**
  * 从记忆层获取画像相关的记忆
  */
 const PROFILE_LEVELS: Level[] = ['user', 'soul', 'fact', 'project'];
 
-function getProfileMemories(env: WeaveEnv): MemoryEntry[] {
+function getProfileMemories(env: WeaveEnv, frozen: Set<string>): MemoryEntry[] {
   const memories: MemoryEntry[] = [];
-  
+  // 画像会随 S2 注入：open 冲突双方与已标记敏感的记忆都不能进画像，
+  // 否则绕过「冲突双方便都不注入」与敏感撤出边界
+  const frozenIds = [...frozen];
+  const notFrozen = frozenIds.length > 0 ? " AND id NOT IN (" + frozenIds.map(() => "?").join(",") + ")" : "";
+
   for (const level of PROFILE_LEVELS) {
     const sql = `
       SELECT * FROM ${level}
-      WHERE status != 'archived'
+      WHERE status != 'archived' AND is_sensitive != 1${notFrozen}
       ORDER BY importance DESC, updated_at DESC
     `;
-    
-    const rows = env.db.prepare(sql).all() as any[];
+
+    const rows = env.db.prepare(sql).all(...frozenIds) as any[];
     for (const row of rows) {
       memories.push({
         id: row.id,
@@ -150,8 +155,8 @@ function inferSource(memory: MemoryEntry): ProfileSource {
     return 'stated';
   }
   
-  // 观察：第三人称记录或多次确认
-  if (memory.accessCount >= 2 || memory.importance >= 70) {
+  // 观察：第三人称记录或多次确认（importance 全库 1–5 制）
+  if (memory.accessCount >= 2 || memory.importance >= 4) {
     return 'observed';
   }
   
@@ -175,10 +180,10 @@ function calculateConfidence(memory: MemoryEntry, source: ProfileSource): number
     confidence = Math.min(confidence, 0.7);
   }
   
-  // 根据 importance 调整
-  if (memory.importance >= 80) {
+  // 根据 importance 调整（1–5 制）
+  if (memory.importance >= 4) {
     confidence += 0.1;
-  } else if (memory.importance < 50) {
+  } else if (memory.importance < 3) {
     confidence -= 0.1;
   }
   
@@ -288,7 +293,11 @@ export function generateUserProfile(
     };
   }
   
-  const memories = getProfileMemories(env);
+  const frozen = new Set<string>();
+  for (const c of listConflicts(env, "open")) {
+    for (const t of c.contenders) frozen.add(t.id);
+  }
+  const memories = getProfileMemories(env, frozen);
   const items: ProfileItem[] = [];
   const now = Date.now();
   const excluded = { sensitive: 0, lowConfidence: 0, expired: 0 };

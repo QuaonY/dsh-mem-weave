@@ -5,6 +5,9 @@
 
 import type { WeaveEnv } from "../store/db";
 import { queryAudit } from "../store/dao";
+import { SensitivityDetector } from "../privacy/detector";
+import { DEFAULT_PRIVACY_CONFIG } from "../privacy/types";
+import { redactText } from "../privacy/redact";
 
 export interface TurnNoticeConfig {
   enabled: boolean;
@@ -25,13 +28,18 @@ export interface TurnNotice {
  * @param since 起始时间（Unix ms），通常是轮次开始时刻
  * @param lang 提示语言（zh / en）
  * @param cfg 是否启用通知
+ * @param sessionId 只统计本会话的写入（系统级动作如 dream 不受会话限制）
  * @returns 通知结构，enabled=false 时不显示
  */
-export function buildTurnNotice(env: WeaveEnv, since: number, lang: "zh" | "en", cfg: TurnNoticeConfig): TurnNotice {
+export function buildTurnNotice(env: WeaveEnv, since: number, lang: "zh" | "en", cfg: TurnNoticeConfig, sessionId?: string): TurnNotice {
   if (!cfg.enabled) return { enabled: false, summary: "", body: "" };
 
-  const rows = queryAudit(env, { since, limit: 500 });
+  const rows = queryAudit(env, { since, limit: 500, sessionId });
   if (rows.length === 0) return { enabled: false, summary: "", body: "" };
+
+  // 卡片正文模型可见：审计里存的是原文，出卡片前必须过与注入相同的脱敏
+  const detector = new SensitivityDetector();
+  const redact = (text: string): string => redactText(text, detector, DEFAULT_PRIVACY_CONFIG);
 
   const writes = rows.filter((r) => r.action === "memory.write" && r.reason?.includes("L0"));
   const merged = rows.filter((r) => r.action === "memory.merge");
@@ -65,7 +73,7 @@ export function buildTurnNotice(env: WeaveEnv, since: number, lang: "zh" | "en",
     counts.push(zh ? `写入 ${writes.length} 条` : `${writes.length} written`);
     lines.push(zh ? `**写入** ${writes.length} 条：` : `**Written** ${writes.length}:`);
     writes.slice(0, 5).forEach((r) => {
-      const text = (r.after ?? "").replace(/\s+/g, " ").trim();
+      const text = redact(r.after ?? "").replace(/\s+/g, " ").trim();
       const snippet = text.slice(0, 60) + (text.length > 60 ? "…" : "");
       lines.push(`  - ${snippet}`);
     });
@@ -130,7 +138,7 @@ export function buildTurnNotice(env: WeaveEnv, since: number, lang: "zh" | "en",
   if (promiseHints.length > 0) {
     counts.push(zh ? `约定可能已兑现 ${promiseHints.length} 条` : `${promiseHints.length} promise(s) may be kept`);
     lines.push(zh ? `**这条约定可能已兑现**（未自动结算，确认后可用 weave_promise 标记）：` : `**This promise may already be kept** (not settled automatically):`);
-    promiseHints.slice(0, 5).forEach((r) => lines.push(`  - ${(r.after ?? "").slice(0, 60)} [${r.target}]`));
+    promiseHints.slice(0, 5).forEach((r) => lines.push(`  - ${redact(r.after ?? "").slice(0, 60)} [${r.target}]`));
   }
 
   // 本轮没有可汇报的动作（例如只有召回计数之类的审计）：不出卡片

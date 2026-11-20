@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openWeaveDb, type WeaveEnv } from "../src/store/db";
 import { ensureSchema } from "../src/store/migrate";
 import { captureL0Message, DEFAULT_L0_CONFIG } from "../src/store/l0";
+import { listMemory } from "../src/store/dao";
 import { extractMemories } from "../src/extract/service";
 import { DEFAULT_EXTRACT_CONFIG } from "../src/extract/extractor";
 
@@ -292,5 +293,101 @@ describe("自动抽取集成", () => {
       expect(result.trigger).toBe(trigger);
       expect(result.candidatesCreated).toBe(1);
     }
+  });
+
+  describe("抽取落库", () => {
+    it("低风险抽取经治理管线真正落库，候选记录可溯源", async () => {
+      const sessionId = "sess-persist-1";
+      const l0Config = { ...DEFAULT_L0_CONFIG, enabled: true };
+      captureL0Message(env, sessionId, "user", "我的项目使用 TypeScript 和 React", l0Config);
+
+      const mockLLM = async () =>
+        JSON.stringify([
+          {
+            level: "project",
+            content: "项目技术栈：TypeScript、React",
+            keywords: ["TypeScript", "React", "技术栈"],
+            confidence: 0.9,
+            reason: "用户明确说明了技术栈",
+          },
+        ]);
+
+      const result = await extractMemories(env, sessionId, DEFAULT_EXTRACT_CONFIG, {
+        trigger: "manual",
+        useLLM: true,
+        llmCall: mockLLM,
+      });
+
+      expect(result.autoAccepted).toBe(1);
+
+      const memories = listMemory(env, { level: "project" });
+      expect(memories.length).toBe(1);
+      expect(memories[0].content).toBe("项目技术栈：TypeScript、React");
+      expect(memories[0].status).toBe("active");
+      expect(memories[0].source).toBe("extract");
+      expect(memories[0].importance).toBeGreaterThanOrEqual(1);
+      expect(memories[0].importance).toBeLessThanOrEqual(5);
+      expect(memories[0].evidence.length).toBeGreaterThan(0);
+
+      const candidate = env.db
+        .prepare("SELECT verdict, decided_by, merged_into FROM candidates WHERE decided_by = 'extract'")
+        .get() as { verdict: string; decided_by: string; merged_into: string | null };
+      expect(candidate.verdict).toBe("accepted");
+      expect(candidate.merged_into).toBe(memories[0].id);
+    });
+
+    it("isHighRisk 漏掉的敏感凭据被治理拦截，不落库", async () => {
+      const sessionId = "sess-persist-2";
+      const l0Config = { ...DEFAULT_L0_CONFIG, enabled: true };
+      captureL0Message(env, sessionId, "user", "帮我记一下这个密钥", l0Config);
+
+      const mockLLM = async () =>
+        JSON.stringify([
+          {
+            level: "user",
+            content: "用户的API密钥是 sk-abcdefghijklmnop1234",
+            keywords: ["API"],
+            confidence: 0.9,
+            reason: "用户提供了密钥",
+          },
+        ]);
+
+      const result = await extractMemories(env, sessionId, DEFAULT_EXTRACT_CONFIG, {
+        trigger: "manual",
+        useLLM: true,
+        llmCall: mockLLM,
+      });
+
+      expect(result.skipped).toBe(1);
+      expect(result.autoAccepted).toBe(0);
+      expect(result.candidatesCreated).toBe(0);
+      expect(listMemory(env, { level: "user" }).length).toBe(0);
+    });
+
+    it("重复抽取同一条内容不会落两条记忆", async () => {
+      const sessionId = "sess-persist-3";
+      const l0Config = { ...DEFAULT_L0_CONFIG, enabled: true };
+      captureL0Message(env, sessionId, "user", "我住在北京", l0Config);
+
+      const mockLLM = async () =>
+        JSON.stringify([
+          {
+            level: "user",
+            content: "用户住在北京",
+            keywords: ["北京", "居住地"],
+            confidence: 0.9,
+            reason: "用户提供了居住地",
+          },
+        ]);
+
+      const opts = { trigger: "manual" as const, useLLM: true, llmCall: mockLLM, qualityThreshold: 0.3 };
+      const first = await extractMemories(env, sessionId, DEFAULT_EXTRACT_CONFIG, opts);
+      expect(first.autoAccepted).toBe(1);
+
+      const second = await extractMemories(env, sessionId, DEFAULT_EXTRACT_CONFIG, opts);
+      expect(second.skipped).toBe(1);
+      expect(second.autoAccepted).toBe(0);
+      expect(listMemory(env, { level: "user" }).length).toBe(1);
+    });
   });
 });

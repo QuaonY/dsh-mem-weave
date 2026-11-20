@@ -29,6 +29,58 @@ const CN_NUMBER_WORDS: Record<string, string> = {
   "万": "10000",
 };
 
+const CN_UNITS: Record<string, number> = {
+  "十": 10, "拾": 10,
+  "百": 100, "佰": 100,
+  "千": 1000, "仟": 1000,
+};
+
+// 形似数字的常用词，整体保留不转换
+const CN_NUM_STOP_WORDS = new Set(["万一", "千万", "万千", "万万", "千千"]);
+
+const CN_NUM_RUN = /[零〇一壹二贰两三俩三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟万]{2,}/g;
+
+/**
+ * 把整段中文数字解析为阿拉伯数字字符串；解析不了返回 null。
+ * 十三 → 13，一百二十三 → 123，两万三千 → 23000，一二三 → 123
+ */
+function parseCnNumber(run: string): string | null {
+  const chars = [...run];
+  if (chars.every((ch) => CN_DIGITS[ch] !== undefined)) {
+    return chars.map((ch) => CN_DIGITS[ch]).join("");
+  }
+  let total = 0;
+  let section = 0;
+  let digit = 0;
+  let pendingDigit = false;
+  for (const ch of chars) {
+    if (ch === "零" || ch === "〇") {
+      digit = 0;
+      pendingDigit = false;
+      continue;
+    }
+    const d = CN_DIGITS[ch];
+    if (d !== undefined) {
+      if (pendingDigit) return null;
+      digit = Number(d);
+      pendingDigit = true;
+    } else if (ch === "万") {
+      const base = total + section + digit;
+      total = (base === 0 ? 1 : base) * 10000;
+      section = 0;
+      digit = 0;
+      pendingDigit = false;
+    } else {
+      const u = CN_UNITS[ch];
+      if (u === undefined) return null;
+      section += (pendingDigit ? digit : 1) * u;
+      digit = 0;
+      pendingDigit = false;
+    }
+  }
+  return String(total + section + digit);
+}
+
 // 量词归一化（保留数字，去掉量词）
 const MEASURE_WORDS = new Set([
   "个", "只", "条", "张", "块", "片", "本", "支", "根", "把",
@@ -44,26 +96,37 @@ const MEASURE_WORDS = new Set([
  * - "住四楼" / "住4楼" → "住", "4"
  * - "买了三个苹果" / "买了3个苹果" → "买了", "3", "苹果"
  * - "第二次" / "第2次" → "第", "2"
+ * - "十三楼" → "13楼"；"十分好吃" / "百科" / "万一" 保持原样（不是数字）
  */
 function normalizeNumber(text: string): string {
   let normalized = text;
-  
-  // 先处理特殊数字词（十、百、千、万）
-  for (const [cn, num] of Object.entries(CN_NUMBER_WORDS)) {
-    normalized = normalized.replace(new RegExp(cn, "g"), num);
-  }
-  
-  // 再替换单个中文数字为阿拉伯数字
-  for (const [cn, num] of Object.entries(CN_DIGITS)) {
-    normalized = normalized.replace(new RegExp(cn, "g"), num);
-  }
-  
-  // 去掉量词（保留前面的数字）
+
+  // ① 多字中文数字串整体解析（十三→13、一百二十三→123），解析不了或是常用词则保留
+  normalized = normalized.replace(CN_NUM_RUN, (run) => {
+    if (CN_NUM_STOP_WORDS.has(run)) return run;
+    return parseCnNumber(run) ?? run;
+  });
+
+  const measureAlt = [...MEASURE_WORDS].join("|");
+  const unitChars = Object.keys(CN_NUMBER_WORDS).join("");
+
+  // ② 单个中文数字只在量词前转换（四楼→4楼、三个→3个）；
+  //    前面是位权字的不转（"万一"里的"一"），避免腐蚀词语
+  normalized = normalized.replace(
+    new RegExp("(?<![" + unitChars + "])([" + Object.keys(CN_DIGITS).join("") + "])(?=" + measureAlt + ")", "g"),
+    (ch) => CN_DIGITS[ch]
+  );
+  // 位权字同理，但"十分/万分"是程度副词，后接"分"时不转
+  normalized = normalized.replace(
+    new RegExp("(?<![" + unitChars + "])([" + unitChars + "])(?!分)(?=" + measureAlt + ")", "g"),
+    (ch) => CN_NUMBER_WORDS[ch]
+  );
+
+  // ③ 去掉数字后的量词（保留数字）
   for (const measure of MEASURE_WORDS) {
-    // 匹配：数字+量词，保留数字
     normalized = normalized.replace(new RegExp("(\\d+)" + measure, "g"), "$1");
   }
-  
+
   return normalized;
 }
 

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openWeaveDb, type WeaveEnv } from "../src/store/db";
 import { ensureSchema } from "../src/store/migrate";
-import { getLinks, getMemory, insertMemory, newId, restoreMemory } from "../src/store/dao";
+import { getLinks, getMemory, insertMemory, listMemory, newId, restoreMemory } from "../src/store/dao";
 import {
   acquireDreamLease,
   consolidateNow,
@@ -152,6 +152,50 @@ describe("轮②：冷记忆合并进 topic", () => {
     for (const id of ["r1", "s1", "h1", "n1"]) {
       expect(getMemory(env, id)?.status).toBe("active");
     }
+  });
+
+  it("冷条目按项目各自折叠，摘要不跨项目错标", () => {
+    const old = Date.now() - 200 * DAY_MS;
+    insertMemory(env, entry({ id: "a1", content: "甲项目旧事实一", project: "alpha", updatedAt: old }));
+    insertMemory(env, entry({ id: "a2", content: "甲项目旧事实二", project: "alpha", updatedAt: old }));
+    insertMemory(env, entry({ id: "b1", content: "乙项目旧事实一", project: "beta", updatedAt: old }));
+    insertMemory(env, entry({ id: "b2", content: "乙项目旧事实二", project: "beta", updatedAt: old }));
+    insertMemory(env, entry({ id: "n1", content: "无项目的孤条冷事实", updatedAt: old }));
+
+    const r = runDream(env, cfg, "dream", { force: true });
+    expect(r.merged).toBe(4);
+    expect(r.mergedFrom.sort()).toEqual(["a1", "a2", "b1", "b2"]);
+    // 无项目只剩 1 条，不足 2 不折叠
+    expect(getMemory(env, "n1")?.status).toBe("active");
+
+    const topics = listMemory(env, { level: "topic" });
+    expect(topics).toHaveLength(2);
+    const alpha = topics.find((t) => t.project === "alpha");
+    const beta = topics.find((t) => t.project === "beta");
+    expect(alpha?.content).toContain("[a1]");
+    expect(alpha?.content).toContain("[a2]");
+    expect(alpha?.content).not.toContain("[b1]");
+    expect(beta?.content).toContain("[b1]");
+    expect(beta?.content).toContain("[b2]");
+    expect(beta?.content).not.toContain("[a1]");
+  });
+
+  it("无项目的冷条目单独成组，不蹭别的项目的摘要", () => {
+    const old = Date.now() - 200 * DAY_MS;
+    insertMemory(env, entry({ id: "n1", content: "无项目旧事实一", updatedAt: old }));
+    insertMemory(env, entry({ id: "n2", content: "无项目旧事实二", updatedAt: old }));
+    insertMemory(env, entry({ id: "p1", content: "丙项目孤条旧事实", project: "gamma", updatedAt: old }));
+
+    const r = runDream(env, cfg, "dream", { force: true });
+    expect(r.merged).toBe(2);
+    expect(r.mergedFrom.sort()).toEqual(["n1", "n2"]);
+    expect(getMemory(env, "p1")?.status).toBe("active");
+
+    const topics = listMemory(env, { level: "topic" });
+    expect(topics).toHaveLength(1);
+    expect(topics[0].project).toBeNull();
+    expect(topics[0].content).toContain("[n1]");
+    expect(topics[0].content).not.toContain("[p1]");
   });
 });
 

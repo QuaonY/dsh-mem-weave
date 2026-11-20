@@ -48,7 +48,7 @@ describe("使用者画像生成", () => {
     // 插入 user 层记忆
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 60, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 4, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "我喜欢编程", JSON.stringify(["编程"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -60,10 +60,30 @@ describe("使用者画像生成", () => {
     expect(profile.preferences[0].confidence).toBeGreaterThanOrEqual(0.9);
   });
 
+  it("已标记敏感的记忆不进画像（画像会随 S2 注入）", () => {
+    const id = newId();
+    env.db.prepare(`
+      INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
+      VALUES (?, NULL, NULL, ?, ?, 3, 'active', 'hot', ?, ?, '[]', NULL, 'human', 0)
+    `).run(id, "我喜欢在深夜安静地写代码", JSON.stringify(["写代码"]), Date.now(), Date.now());
+    env.db.prepare("UPDATE user SET is_sensitive = 1 WHERE id = ?").run(id);
+
+    const profile = generateUserProfile(env, { ...DEFAULT_PROFILE_CONFIG, enabled: true });
+    const all = [
+      ...profile.preferences,
+      ...profile.communicationStyle,
+      ...profile.goals,
+      ...profile.boundaries,
+      ...profile.relationship,
+    ];
+    expect(all.some((i) => i.evidenceIds.includes(id))).toBe(false);
+    expect(profile.summary).not.toContain("深夜");
+  });
+
   it("识别边界/禁区", () => {
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 70, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 5, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "不要打断我工作", JSON.stringify(["工作", "不要"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -77,7 +97,7 @@ describe("使用者画像生成", () => {
   it("识别目标", () => {
     env.db.prepare(`
       INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 65, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 4, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "希望提高代码质量", JSON.stringify(["代码质量", "目标"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -91,7 +111,7 @@ describe("使用者画像生成", () => {
   it("多次访问的记忆提升为 observed", () => {
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 60, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 3)
+      VALUES (?, NULL, NULL, ?, ?, 4, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 3)
     `).run(newId(), "使用 TypeScript 开发", JSON.stringify(["TypeScript"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -105,7 +125,7 @@ describe("使用者画像生成", () => {
   it("过滤敏感关键词", () => {
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 60, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 4, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "我的政治立场", JSON.stringify(["政治"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -118,7 +138,7 @@ describe("使用者画像生成", () => {
   it("低置信度项被过滤", () => {
     env.db.prepare(`
       INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count, confidence)
-      VALUES (?, NULL, NULL, ?, ?, 30, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0, 0.2)
+      VALUES (?, NULL, NULL, ?, ?, 2, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0, 0.2)
     `).run(newId(), "可能喜欢音乐", JSON.stringify(["音乐"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true, minConfidence: 0.4 };
@@ -147,7 +167,7 @@ describe("stated/observed/inferred", () => {
   it("stated：第一人称明确陈述", () => {
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 60, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 4, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "我喜欢简洁的代码", JSON.stringify(["代码"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -161,7 +181,7 @@ describe("stated/observed/inferred", () => {
   it("observed：高访问次数", () => {
     env.db.prepare(`
       INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 60, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 5)
+      VALUES (?, NULL, NULL, ?, ?, 4, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 5)
     `).run(newId(), "经常使用 React", JSON.stringify(["React"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -175,7 +195,7 @@ describe("stated/observed/inferred", () => {
   it("inferred：低访问、非明说", () => {
     env.db.prepare(`
       INSERT INTO project (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, 'test', NULL, ?, ?, 50, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0)
+      VALUES (?, 'test', NULL, ?, ?, 3, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0)
     `).run(newId(), "项目使用 Docker", JSON.stringify(["Docker"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };
@@ -186,11 +206,35 @@ describe("stated/observed/inferred", () => {
     expect(item?.confidence).toBeLessThan(0.8);
   });
 
+  it("importance 按 1–5 制：高重要度视为 observed 并加置信度", () => {
+    env.db.prepare(`
+      INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
+      VALUES (?, NULL, NULL, ?, ?, 5, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 0)
+    `).run(newId(), "部署窗口在周六", JSON.stringify(["部署"]), Date.now(), Date.now());
+
+    const profile = generateUserProfile(env, { ...DEFAULT_PROFILE_CONFIG, enabled: true });
+    const item = profile.preferences.find(p => p.content === "部署窗口在周六");
+    expect(item?.source).toBe("observed");
+    expect(item?.confidence).toBeCloseTo(0.8);
+  });
+
+  it("importance 按 1–5 制：低重要度扣置信度", () => {
+    env.db.prepare(`
+      INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count, confidence)
+      VALUES (?, NULL, NULL, ?, ?, 1, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0, 0.6)
+    `).run(newId(), "偶尔喝咖啡", JSON.stringify(["咖啡"]), Date.now(), Date.now());
+
+    const profile = generateUserProfile(env, { ...DEFAULT_PROFILE_CONFIG, enabled: true });
+    const item = profile.preferences.find(p => p.content === "偶尔喝咖啡");
+    expect(item?.source).toBe("inferred");
+    expect(item?.confidence).toBeCloseTo(0.5);
+  });
+
   it("inferred 类型有过期时间", () => {
     const now = Date.now();
     env.db.prepare(`
       INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 50, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0)
+      VALUES (?, NULL, NULL, ?, ?, 3, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0)
     `).run(newId(), "可能在学习 Rust", JSON.stringify(["Rust"]), now, now);
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true, inferredExpiryDays: 30 };
@@ -207,7 +251,7 @@ describe("stated/observed/inferred", () => {
     
     env.db.prepare(`
       INSERT INTO fact (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 50, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0)
+      VALUES (?, NULL, NULL, ?, ?, 3, 'active', 'cold', ?, ?, '[]', NULL, 'agent', 0)
     `).run(newId(), "过期的推断", JSON.stringify(["过期"]), expiredTime, expiredTime);
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true, inferredExpiryDays: 30 };
@@ -250,7 +294,7 @@ describe("画像依据可追溯", () => {
         id,
         content,
         JSON.stringify([content.slice(0, 2)]),
-        opts.importance ?? 60,
+        opts.importance ?? 4,
         now,
         now,
         opts.accessCount ?? 1,
@@ -262,8 +306,8 @@ describe("画像依据可追溯", () => {
   it("basis 记录层、扫描/采用数、三类过滤计数、阈值与证据 id", () => {
     const kept = insert("user", "我喜欢编程");
     insert("user", "我的政治立场");
-    insert("fact", "可能喜欢音乐", { importance: 30, confidence: 0.2, accessCount: 0 });
-    insert("fact", "过期的推断", { importance: 50, confidence: null, accessCount: 0, updatedAt: Date.now() - 31 * 86400000 });
+    insert("fact", "可能喜欢音乐", { importance: 2, confidence: 0.2, accessCount: 0 });
+    insert("fact", "过期的推断", { importance: 3, confidence: null, accessCount: 0, updatedAt: Date.now() - 31 * 86400000 });
 
     const profile = generateUserProfile(env, { ...DEFAULT_PROFILE_CONFIG, enabled: true, minConfidence: 0.4 });
     expect(profile.basis).toMatchObject({
@@ -281,7 +325,7 @@ describe("画像依据可追溯", () => {
     expect(item?.trace).toMatchObject({
       level: "user",
       categoryRule: "default-preference",
-      importance: 60,
+      importance: 4,
       accessCount: 1,
       memoryConfidence: null,
     });
@@ -291,7 +335,7 @@ describe("画像依据可追溯", () => {
     env.db
       .prepare(
         "INSERT INTO soul (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)" +
-          " VALUES (?, NULL, NULL, ?, ?, 70, 'active', 'core', ?, ?, '[]', NULL, 'agent', 1)",
+          " VALUES (?, NULL, NULL, ?, ?, 5, 'active', 'core', ?, ?, '[]', NULL, 'agent', 1)",
       )
       .run(newId(), "陪伴用户完成长期项目", JSON.stringify(["陪伴"]), Date.now(), Date.now());
     insert("user", "不要打断我工作");
@@ -303,7 +347,7 @@ describe("画像依据可追溯", () => {
 
   it("pruneExpiredInferences 同步更新 basis 的 used 与证据 id", () => {
     const now = Date.now();
-    const id = insert("fact", "过期的推断", { importance: 50, confidence: null, accessCount: 0, updatedAt: now });
+    const id = insert("fact", "过期的推断", { importance: 3, confidence: null, accessCount: 0, updatedAt: now });
     const profile = generateUserProfile(env, { ...DEFAULT_PROFILE_CONFIG, enabled: true, inferredExpiryDays: 30 });
     expect(profile.basis!.used).toBe(1);
 
@@ -337,7 +381,7 @@ describe("S2 注入", () => {
   it("生成 S2 注入文本", () => {
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 70, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 5, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "我喜欢简洁的代码", JSON.stringify(["代码"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true, injectToS2: true };
@@ -362,7 +406,7 @@ describe("S2 注入", () => {
     for (let i = 0; i < 10; i++) {
       env.db.prepare(`
         INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-        VALUES (?, NULL, NULL, ?, ?, 70, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+        VALUES (?, NULL, NULL, ?, ?, 5, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
       `).run(newId(), `我喜欢技术 ${i}`, JSON.stringify([`tech${i}`]), Date.now(), Date.now());
     }
     
@@ -381,7 +425,7 @@ describe("S2 注入", () => {
   it("生成简洁预览", () => {
     env.db.prepare(`
       INSERT INTO user (id, project, section, content, keywords, importance, status, tier, created_at, updated_at, evidence, hash, source, access_count)
-      VALUES (?, NULL, NULL, ?, ?, 70, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
+      VALUES (?, NULL, NULL, ?, ?, 5, 'active', 'hot', ?, ?, '[]', NULL, 'agent', 1)
     `).run(newId(), "我喜欢编程", JSON.stringify(["编程"]), Date.now(), Date.now());
     
     const config = { ...DEFAULT_PROFILE_CONFIG, enabled: true };

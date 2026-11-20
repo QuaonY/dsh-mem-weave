@@ -68,4 +68,19 @@ describe("settings/defaults", () => {
     const d = (await invokeRpc(rt.service, "memweave.settings/defaults", {}, "agent")) as Cfg;
     expect(d.budget.recallMaxChars).toBe(defaultConfig(dir).budget.recallMaxChars);
   });
+
+  it("settings/get 对 agent 不回显 embedding.apiKey（内部配置不受影响）", async () => {
+    dir = mkdtempSync(join(tmpdir(), "mw-defaults-"));
+    rt = openService(dir);
+    await invokeRpc(rt.service, "memweave.settings/update", { patch: { embedding: { apiKey: "sk-test-secret" } } }, "human");
+    expect(rt.service.config.embedding?.apiKey).toBe("sk-test-secret");
+
+    const got = (await invokeRpc(rt.service, "memweave.settings/get", {}, "agent")) as { embedding?: { apiKey?: string } };
+    expect(got.embedding?.apiKey ?? "").toBe("");
+    // 脱敏是副本，不能把服务端真实配置抹掉
+    expect(rt.service.config.embedding?.apiKey).toBe("sk-test-secret");
+
+    const defaults = (await invokeRpc(rt.service, "memweave.settings/defaults", {}, "agent")) as { embedding?: { apiKey?: string } };
+    expect(defaults.embedding?.apiKey ?? "").toBe("");
+  });
 });

@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { WeaveService, defaultConfig } from "../src/host/service";
 import { openWeaveDb } from "../src/store/db";
 import { ensureSchema } from "../src/store/migrate";
+import { getMemory } from "../src/store/dao";
 import type { MemoryEntry } from "../src/core/types";
 import type { ConflictStatus } from "../src/conflict/types";
 
@@ -322,6 +323,90 @@ describe("Conflict Integration", () => {
           actor: "test",
         })
       ).toThrow();
+    });
+  });
+
+  describe("Merge Governance", () => {
+    async function makeConflict() {
+      const mem1 = await service.remember({ content: "系统启用了备份", level: "fact" }, "human");
+      const mem2 = await service.remember({ content: "系统不启用备份", level: "lesson" }, "human");
+      const result = await service.detectConflicts();
+      expect(result.conflicts.length).toBeGreaterThan(0);
+      return { mem1, mem2, conflict: result.conflicts[0] };
+    }
+
+    it("merge 后保留方正文更新且可召回，另一方归档", async () => {
+      const { conflict } = await makeConflict();
+      const mergedId = service.mergeConflictingMemories(conflict.id, "双方核对后确认部署窗口改到周六");
+      expect(mergedId).toBe(conflict.memory_id_a);
+
+      const merged = getMemory(env, mergedId!);
+      expect(merged?.content).toBe("双方核对后确认部署窗口改到周六");
+
+      const loser = getMemory(env, conflict.memory_id_b);
+      expect(loser?.status).toBe("archived");
+
+      // FTS 已同步：新正文的关键词能召回
+      const hits = await service.recall("部署窗口改到周六", { limit: 10 });
+      expect(hits.some((m) => m.id === mergedId)).toBe(true);
+    });
+
+    it("merge 正文含敏感凭据时拒绝，冲突保持 pending、双方记忆不变", async () => {
+      const { mem1, mem2, conflict } = await makeConflict();
+      expect(() =>
+        service.mergeConflictingMemories(conflict.id, "合并结论：密钥是 sk-abcdefghijklmnop1234")
+      ).toThrow(/sensitive/);
+
+      const still = (await service.getConflicts()).find((c) => c.id === conflict.id);
+      expect(still?.status).toBe("pending");
+      expect(getMemory(env, mem1.id!)?.content).toBe("系统启用了备份");
+      expect(getMemory(env, mem2.id!)?.status).toBe("active");
+    });
+
+    it("merge 正文为空或超长时拒绝", async () => {
+      const { conflict } = await makeConflict();
+      expect(() => service.mergeConflictingMemories(conflict.id, "   ")).toThrow();
+      expect(() => service.mergeConflictingMemories(conflict.id, "长".repeat(20000))).toThrow();
+      const still = (await service.getConflicts()).find((c) => c.id === conflict.id);
+      expect(still?.status).toBe("pending");
+    });
+
+    it("未知 resolution 与重复裁决都拒绝", async () => {
+      const { conflict } = await makeConflict();
+      expect(() =>
+        service.resolveMemoryConflict(conflict.id, { resolution: "delete_both" as any, actor: "test" })
+      ).toThrow(/unknown resolution/);
+
+      service.resolveMemoryConflict(conflict.id, { resolution: "complement", actor: "test" });
+      expect(() =>
+        service.resolveMemoryConflict(conflict.id, { resolution: "keep_a", actor: "test" })
+      ).toThrow(/already resolved/);
+    });
+
+    it("keep_a/keep_b/merge 都写撤销台账，且 undo 能还原", async () => {
+      const { mem1, mem2, conflict } = await makeConflict();
+      const aIsMem1 = conflict.memory_id_a === mem1.id;
+      const kept = aIsMem1 ? mem1 : mem2;
+      const dropped = aIsMem1 ? mem2 : mem1;
+      const beforeContent = getMemory(env, kept.id!)?.content;
+
+      service.mergeConflictingMemories(conflict.id, "双方核对后确认部署窗口改到周六");
+
+      const rows = env.db
+        .prepare("SELECT id, action, target FROM undo_log WHERE action IN ('memory.update', 'memory.archive') ORDER BY ts")
+        .all() as Array<{ id: string; action: string; target: string }>;
+      const updateRow = rows.find((r) => r.action === "memory.update" && r.target === kept.id);
+      const archiveRow = rows.find((r) => r.action === "memory.archive" && r.target === dropped.id);
+      expect(updateRow).toBeDefined();
+      expect(archiveRow).toBeDefined();
+
+      const u1 = await service.undo(archiveRow!.id, "test");
+      expect(u1.ok).toBe(true);
+      const u2 = await service.undo(updateRow!.id, "test");
+      expect(u2.ok).toBe(true);
+
+      expect(getMemory(env, kept.id!)?.content).toBe(beforeContent);
+      expect(getMemory(env, dropped.id!)?.status).toBe("active");
     });
   });
 });

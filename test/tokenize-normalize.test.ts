@@ -121,4 +121,41 @@ describe("数字归一化", () => {
     // 只验证包含数字即可
     expect(tokens2.some(t => /\d/.test(t))).toBe(true);
   });
+
+  it("多位中文数字整段解析，不再逐字拼接", () => {
+    expect(tokenize("十三楼")).toContain("13");
+    expect(tokenize("第十三章")).toContain("13");
+    expect(tokenize("二十个")).toContain("20");
+    expect(tokenize("一百二十三个")).toContain("123");
+    expect(tokenize("三千五百元")).toContain("3500");
+    expect(tokenize("两万三千")).toContain("23000");
+    expect(tokenize("一百零三")).toContain("103");
+  });
+
+  it("程度副词/常用词不被腐蚀", () => {
+    // 十分 ≠ 10
+    const t1 = tokenize("十分好吃");
+    expect(t1).toContain("十分");
+    expect(t1).not.toContain("10");
+
+    // 百科 ≠ 100科
+    const t2 = tokenize("百科全书");
+    expect(t2).toContain("百科");
+    expect(t2.some(t => t.includes("100"))).toBe(false);
+
+    // 万一 / 千万 / 万万 保持整词
+    expect(tokenize("万一迟到")).toContain("万一");
+    expect(tokenize("千万别迟到")).toContain("千万");
+    expect(tokenize("万万没想到")).toContain("万万");
+
+    // 一起 / 一致 里的"一"不转换
+    const t3 = tokenize("我们一起努力");
+    expect(t3).toContain("一起");
+    expect(t3).not.toContain("1");
+    expect(tokenize("意见一致")).toContain("一致");
+
+    // 地名里的数字不转换
+    expect(tokenize("住在四川")).toContain("四川");
+    expect(tokenize("三国故事")).toContain("三国");
+  });
 });

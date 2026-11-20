@@ -6,10 +6,12 @@
 
 import type { SQLInputValue } from "node:sqlite";
 import { LEVEL_ORDER, type Level, type MemoryEntry } from "../../core/types";
-import { archiveMemory, getMemory, listConflicts as listConflictRows, listMemory } from "../../store/dao";
+import { appendUndo, archiveMemory, getMemory, listConflicts as listConflictRows, listMemory, reviseMemory } from "../../store/dao";
 import { LAYER_TABLES } from "../../store/schema";
 import type { WeaveEnv } from "../../store/db";
 import { enqueueEmbedding, withdrawSensitiveEmbedding } from "../../store/vector";
+import { MAX_CONTENT, scanSensitiveContent } from "../../store/govern";
+import { extractKeywords } from "../../core/tokenize";
 import type { FileLogger } from "../logger";
 import type { SensitivityDetector } from "../../privacy/detector";
 import {
@@ -251,6 +253,10 @@ export function resolveMemoryConflict(
 ): string | undefined {
   const { resolution, merged_content, actor = "human" } = options;
 
+  if (!["keep_a", "keep_b", "merge", "complement", "ignore"].includes(resolution)) {
+    throw new Error(`unknown resolution: ${resolution}`);
+  }
+
   const conflict = env.db.prepare("SELECT * FROM memory_conflicts WHERE id = ?").get(conflictId) as
     | MemoryConflict
     | undefined;
@@ -258,30 +264,55 @@ export function resolveMemoryConflict(
   if (!conflict) {
     throw new Error(`Conflict ${conflictId} not found`);
   }
+  if (conflict.status !== "pending") {
+    throw new Error(`Conflict ${conflictId} already ${conflict.status}`);
+  }
 
   let mergedMemoryId: string | undefined;
 
   switch (resolution) {
-    case "keep_a":
+    case "keep_a": {
+      const loser = getMemory(env, conflict.memory_id_b);
       archiveMemory(env, conflict.memory_id_b, actor);
+      if (loser) appendUndo(env, { actor, action: "memory.archive", target: loser.id, payload: { beforeStatus: loser.status } });
       mergedMemoryId = conflict.memory_id_a;
       break;
+    }
 
-    case "keep_b":
+    case "keep_b": {
+      const loser = getMemory(env, conflict.memory_id_a);
       archiveMemory(env, conflict.memory_id_a, actor);
+      if (loser) appendUndo(env, { actor, action: "memory.archive", target: loser.id, payload: { beforeStatus: loser.status } });
       mergedMemoryId = conflict.memory_id_b;
       break;
+    }
 
     case "merge": {
-      if (!merged_content) {
+      // 合并正文与写入/修订走同一套把关：长度、敏感词；落库走 reviseMemory（hash/FTS/向量同步）
+      const content = (merged_content ?? "").trim();
+      if (!content) {
         throw new Error("merged_content is required for merge resolution");
       }
-      const table = LAYER_TABLES[conflict.level_a as Level];
-      env.db
-        .prepare(`UPDATE ${table} SET content = ?, updated_at = ? WHERE id = ?`)
-        .run(merged_content, Date.now(), conflict.memory_id_a);
-      archiveMemory(env, conflict.memory_id_b, actor);
-      mergedMemoryId = conflict.memory_id_a;
+      if (content.length > MAX_CONTENT) {
+        throw new Error("merged_content too long (max " + MAX_CONTENT + ")");
+      }
+      const sensitive = scanSensitiveContent(content);
+      if (sensitive) {
+        throw new Error("sensitive pattern matched: " + sensitive);
+      }
+      const a = getMemory(env, conflict.memory_id_a);
+      const b = getMemory(env, conflict.memory_id_b);
+      if (!a || !b) {
+        throw new Error("conflict memories not found");
+      }
+      const r = reviseMemory(env, a.id, { content, keywords: extractKeywords(content) }, actor);
+      if (!r.ok) {
+        throw new Error("merge revise failed: " + (r.code ?? "unknown"));
+      }
+      appendUndo(env, { actor, action: "memory.update", target: a.id, payload: { before: { content: a.content, keywords: a.keywords } } });
+      archiveMemory(env, b.id, actor);
+      appendUndo(env, { actor, action: "memory.archive", target: b.id, payload: { beforeStatus: b.status } });
+      mergedMemoryId = a.id;
       break;
     }
 

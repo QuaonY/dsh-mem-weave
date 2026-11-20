@@ -139,6 +139,50 @@ describe("多模型 Persona", () => {
     assert.equal(merged.tone.text, "新的语气");
   });
 
+  it("会话覆盖不污染全局 persona（其他会话不受影响）", () => {
+    const config: MultiPersonaConfig = {
+      enabled: true,
+      defaultTTL: 86400,
+    };
+    const manager = new PersonaManager(config);
+    const globalPersona = createTestPersona();
+
+    const envWith = (overrides: Record<string, unknown> | undefined) =>
+      ({
+        db: {
+          prepare: () => ({
+            get: () =>
+              overrides === undefined
+                ? undefined
+                : {
+                    session_id: "s",
+                    enabled: 1,
+                    overrides: JSON.stringify(overrides),
+                    created_at: Date.now(),
+                    updated_at: Date.now(),
+                  },
+          }),
+        },
+      }) as any;
+
+    const mergedA = manager.mergePersona(
+      envWith({ appearance: "会话A外观", tone: "会话A语气" }),
+      "sess-a",
+      globalPersona
+    );
+    assert.equal(mergedA.appearance.text, "会话A外观");
+    assert.equal(mergedA.tone.text, "会话A语气");
+
+    // 全局对象本身不能被就地修改
+    assert.equal(globalPersona.appearance.text, "默认外观");
+    assert.equal(globalPersona.tone.text, "默认语气");
+
+    // 另一个无覆盖的会话仍看到全局值
+    const mergedB = manager.mergePersona(envWith(undefined), "sess-b", globalPersona);
+    assert.equal(mergedB.appearance.text, "默认外观");
+    assert.equal(mergedB.tone.text, "默认语气");
+  });
+
   it("禁用的会话 persona 不生效", () => {
     const config: MultiPersonaConfig = {
       enabled: true,

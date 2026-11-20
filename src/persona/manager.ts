@@ -48,7 +48,12 @@ export class PersonaManager {
     global: PersonaConfig,
     overrides: Partial<SessionPersonaOverrides>
   ): PersonaConfig {
-    const merged: PersonaConfig = { ...global };
+    // appearance/tone 是嵌套对象：浅拷贝会让会话覆盖就地改掉全局 persona，污染其他会话
+    const merged: PersonaConfig = {
+      ...global,
+      appearance: { ...global.appearance },
+      tone: { ...global.tone },
+    };
 
     // 简单字段覆盖
     if (overrides.thinkingLanguage !== undefined) {

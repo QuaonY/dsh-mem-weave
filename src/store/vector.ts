@@ -399,13 +399,26 @@ export function getVectorConfig(env: WeaveEnv): VectorConfig | null {
   }
 }
 
-/** 设置向量配置 */
+/** 设置向量配置（部分更新：未传的字段沿用现值，不清空） */
 export function setVectorConfig(env: WeaveEnv, cfg: Partial<VectorConfig>): void {
   const now = Date.now();
   try {
     const cur = getVectorConfig(env);
-    const needsReindex = cur && (cfg.dimensions !== cur.dimensions || cfg.provider !== cur.provider || cfg.model !== cur.model) ? 1 : 0;
-    
+    const enabled = cfg.enabled ?? cur?.enabled ?? false;
+    const dimensions = cfg.dimensions ?? cur?.dimensions ?? 384;
+    const provider = cfg.provider ?? cur?.provider ?? null;
+    const model = cfg.model ?? cur?.model ?? null;
+    const changed =
+      cur != null &&
+      (dimensions !== cur.dimensions ||
+        provider !== (cur.provider ?? null) ||
+        model !== (cur.model ?? null));
+    // 无关更新（如只开关 enabled）不应清掉已挂起的重建索引标记
+    const prev = env.db
+      .prepare("SELECT needs_reindex FROM vector_config WHERE id = 1")
+      .get() as { needs_reindex: number } | undefined;
+    const needsReindex = changed ? 1 : (prev?.needs_reindex ?? 0);
+
     env.db
       .prepare(
         "INSERT INTO vector_config (id, enabled, dimensions, provider, model, needs_reindex, updated_at) " +
@@ -413,7 +426,7 @@ export function setVectorConfig(env: WeaveEnv, cfg: Partial<VectorConfig>): void
           "ON CONFLICT(id) DO UPDATE SET enabled=excluded.enabled, dimensions=excluded.dimensions, " +
           "provider=excluded.provider, model=excluded.model, needs_reindex=excluded.needs_reindex, updated_at=excluded.updated_at",
       )
-      .run(cfg.enabled ? 1 : 0, cfg.dimensions ?? 384, cfg.provider ?? null, cfg.model ?? null, needsReindex, now);
+      .run(enabled ? 1 : 0, dimensions, provider, model, needsReindex, now);
   } catch {
     // 配置失败不阻塞
   }

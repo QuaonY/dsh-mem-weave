@@ -155,7 +155,9 @@ function userProfileBlock(host: RenderHost): string | undefined {
     profile.relationship.length;
   if (itemCount === 0) return undefined;
   const text = generateProfileInjection(profile, profileConfig);
-  return host.redactInjectText ? host.redactInjectText(text) : text;
+  // 段标题由 renderAll 按 promptLang 统一加；去掉注入文本自带的中文标题，避免重复与语言错配
+  const body = text.replace(/^## [^\n]*\n+/, "");
+  return host.redactInjectText ? host.redactInjectText(body) : body;
 }
 
 /** 注入前按隐私策略处理条目；宿主没实现时原样返回 */
@@ -228,6 +230,7 @@ export function previewWithContext(
     quotes,
     promises,
     userProfile: userProfileBlock(host),
+    firstTurn: first,
     promptLang: host.config.promptLang,
   };
 
@@ -398,6 +401,9 @@ function finishTurn(
     recallHits: hits,
     quotes,
     promises,
+    // 画像只随首轮 S2 注入；后续轮不重复聚合，省掉每轮一次的全库扫描
+    userProfile: input.first ? userProfileBlock(host) : undefined,
+    firstTurn: input.first,
     promptLang: host.config.promptLang,
   });
   // 只读模式下 addLedger 失败不影响注入

@@ -16,6 +16,7 @@ import {
 } from "../location";
 import { addAudit } from "../../store/dao";
 import { ensureSchema } from "../../store/migrate";
+import { resetBackendDetection } from "../../store/vector";
 import type { WeaveEnv } from "../../store/db";
 import type { BackupManager } from "../../backup/manager";
 import {
@@ -250,6 +251,9 @@ export async function restoreBackupEnhanced(
 
     // 6. 确保 schema 最新
     ensureSchema(host.env);
+
+    // 库文件已整体替换：进程级后端缓存指向旧库，必须重探
+    resetBackendDetection();
 
     // 7. 记录审计
     await host.env.withWrite(() => addAudit(host.env, {
