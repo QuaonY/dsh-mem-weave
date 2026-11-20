@@ -17,9 +17,6 @@
 - 界面与人格：textarea/checkbox 的 DOM 属性修正；会话级人格覆盖不再污染全局人格。
 - 轮后通知：同一毫秒内重复的 turn-stopping 不再重复发卡片。
 
-测试：114 个文件 / 1076 个用例（1 个默认跳过），本轮新增 34 条回归用例。
-另：提交历史的作者邮箱统一为 GitHub noreply，提交内容零改动。
-
 ## [1.0.2] - 2026-11-17
 
 修复输入框旁的记忆徽章在 DSH 0.2.x 上挂载即报错的问题（`Cannot set property "container" without provide`）：
