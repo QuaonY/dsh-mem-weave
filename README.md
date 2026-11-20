@@ -2,7 +2,7 @@
 
 [中文](./README.zh-CN.md) · English
 
-**v1.0.3** · MIT · Node ≥ 22.13 · a memory and persona plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+**v1.0.4** · MIT · Node ≥ 22.13 · a memory and persona plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
 
 MemWeave is what gives DSH a memory. Install it once, and the AI remembers who you are, what you are working on, the mistakes it has made, and the promises it made to you. A new session no longer starts from zero.
 
@@ -56,7 +56,7 @@ Every hit carries its reason and decay factor, visible in the UI. The semantic r
 DSH is required. You do not need a separate Node.js — DSH brings its own (Node ≥ 22.13).
 
 ```bash
-dsh plugin --profile desktop add https://github.com/QuaonY/dsh-mem-weave/releases/download/v1.0.3/dsh-mem-weave-1.0.3.tgz
+dsh plugin --profile desktop add https://github.com/QuaonY/dsh-mem-weave/releases/download/v1.0.4/dsh-mem-weave-1.0.4.tgz
 ```
 
 `--profile` is the profile you use — usually `desktop` for the desktop app, `web` for the web app. If you already downloaded the tgz, pass the path instead:

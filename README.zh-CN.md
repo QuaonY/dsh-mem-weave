@@ -2,7 +2,7 @@
 
 中文 · [English](./README.md)
 
-**v1.0.3** · MIT · Node ≥ 22.13 · 面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的记忆与人格插件
+**v1.0.4** · MIT · Node ≥ 22.13 · 面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的记忆与人格插件
 
 忆织是给 DSH 装上记忆的插件。装一次，AI 就会记住你是谁、你们在做什么项目、它踩过什么坑、答应过你什么事。开新会话不用重新认识你。
 
@@ -56,7 +56,7 @@ FTS5 前置候选 → 关键词(BM25) + 语义 + 链接扩展 → RRF 融合
 需要 DSH；不用另装 Node.js，DSH 自带的即可（要求 Node ≥ 22.13）。
 
 ```bash
-dsh plugin --profile desktop add https://github.com/QuaonY/dsh-mem-weave/releases/download/v1.0.3/dsh-mem-weave-1.0.3.tgz
+dsh plugin --profile desktop add https://github.com/QuaonY/dsh-mem-weave/releases/download/v1.0.4/dsh-mem-weave-1.0.4.tgz
 ```
 
 `--profile` 填你在用的 profile，桌面端一般是 `desktop`，网页版是 `web`。tgz 已下载到本地时可以直接给路径：
