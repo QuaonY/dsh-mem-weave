@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * QA 评测管线（零依赖）：reader + judge
- * 为什么单独一层：`bench/locomo.mjs` 与 `bench/longmemeval.mjs` 量的是**检索指标**
+ * 为什么单独一层：`test/bench/locomo.mjs` 与 `test/bench/longmemeval.mjs` 量的是**检索指标**
  * （recall_any / nDCG / answer_in_context），不是答题准确率。外部系统（Mem0 / Zep）
  * 报的是 LoCoMo 官方 QA 准确率，两套口径不能直接比。这一层把「召回上下文 → 答案」
  * 补上，让 QA 数字单独记账。

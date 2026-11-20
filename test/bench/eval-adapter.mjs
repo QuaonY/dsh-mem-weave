@@ -4,10 +4,10 @@
  * 把「会话/事实 → 记忆 → 召回 → 上下文」这一段跑通，输出可直接交给作答模型的内容。
  * 不改内核，也不需要向量后端；所有评分/判定仍由外部基准脚本负责。
  * 用法：
- *   node bench/eval-adapter.mjs run --memories bench/fixtures/eval-memories.jsonl \
- *     --queries bench/fixtures/eval-queries.jsonl --normalize en --out out.jsonl
- *   node bench/eval-adapter.mjs ingest --memories ... --db .eval/locomo
- *   node bench/eval-adapter.mjs retrieve --queries ... --db .eval/locomo --out out.jsonl
+ *   node test/bench/eval-adapter.mjs run --memories test/bench/fixtures/eval-memories.jsonl \
+ *     --queries test/bench/fixtures/eval-queries.jsonl --normalize en --out out.jsonl
+ *   node test/bench/eval-adapter.mjs ingest --memories ... --db .eval/locomo
+ *   node test/bench/eval-adapter.mjs retrieve --queries ... --db .eval/locomo --out out.jsonl
  * 数据格式（JSONL 每行一条，或 JSON 数组）：
  *   memories: {"id":"m1","content":"...","level":"fact","project":"p1","ts":"2023-05-07","keywords":["..."]}
  *   queries : {"id":"q1","query":"...","gold":["m1"],"limit":10,"answer":"...","category":"..."}
@@ -25,7 +25,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const LEVELS = ["soul", "user", "project", "fact", "lesson", "topic", "rules"];
 
 /* ------------------------------------------------------------------ */
@@ -57,7 +57,7 @@ const USAGE = `MemWeave 外部基准适配器（零依赖）
   --help                     显示本说明
 
 示例（英文基准）：
-  node bench/eval-adapter.mjs run \\
+  node test/bench/eval-adapter.mjs run \\
     --memories locomo_memories.jsonl --queries locomo_queries.jsonl \\
     --normalize en --out locomo_results.jsonl --summary locomo_summary.json
 `;

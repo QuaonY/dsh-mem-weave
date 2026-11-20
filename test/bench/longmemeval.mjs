@@ -8,9 +8,9 @@
  * session-level recall_all / ndcg_any，turn 粒度时另算 turn-level 与 turn→session 指标。
  * 指标实现对齐官方 src/retrieval/eval_utils.py。
  * 用法：
- *   node bench/longmemeval.mjs run --data data/longmemeval_oracle.json
- *   node bench/longmemeval.mjs run --data data/longmemeval_s_cleaned.json --samples 50 --out rows.jsonl
- *   node bench/longmemeval.mjs run --data ... --granularity turn --samples 10
+ *   node test/bench/longmemeval.mjs run --data data/longmemeval_oracle.json
+ *   node test/bench/longmemeval.mjs run --data data/longmemeval_s_cleaned.json --samples 50 --out rows.jsonl
+ *   node test/bench/longmemeval.mjs run --data ... --granularity turn --samples 10
  * 参数：
  *   --data <file>              数据集 JSON（必需）
  *   --granularity session|turn 记忆粒度，默认 session（一个会话一条记忆，过长按 1900 字切块）
@@ -50,7 +50,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { benchConfig, normalizeEn } from "./eval-adapter.mjs";
 import { buildQaReport, createQaPipeline, formatQaLine, resolveQaConfig, runQa } from "./qa.mjs";
 
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const CHUNK = 1900;
 const LEVEL = "topic";
 
@@ -60,7 +60,7 @@ const LEVEL = "topic";
 
 const USAGE = `LongMemEval 跑分器（零依赖）
 
-  node bench/longmemeval.mjs run --data <longmemeval_*.json> [选项]
+  node test/bench/longmemeval.mjs run --data <longmemeval_*.json> [选项]
 
   --granularity session|turn   默认 session
   --roles both|user            默认 user（官方语料只用用户发言）

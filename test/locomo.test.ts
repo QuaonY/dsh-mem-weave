@@ -1,5 +1,5 @@
 /**
- * bench/locomo.mjs（LoCoMo 跑分器）回归测试。
+ * test/bench/locomo.mjs（LoCoMo 跑分器）回归测试。
  * 覆盖四层：
  * 1. 纯函数：会话日期解析、evidence 清洗、dia_id → 检索单元；
  * 2. 文档切分：turn 粒度按 dia_id 落库、session 粒度按发言边界切块、孤儿日期键不炸；
@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..");
-const script = join(root, "bench", "locomo.mjs");
+const script = join(root, "test", "bench", "locomo.mjs");
 
 const dirs: string[] = [];
 function tmp(): string {

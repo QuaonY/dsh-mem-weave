@@ -1,5 +1,5 @@
 /**
- * 基准护栏 bench/guard.mjs 的回归测试。
+ * 基准护栏 test/bench/guard.mjs 的回归测试。
  * 覆盖：
  * 1. 抽指标：LME / LoCoMo 报告 → 护栏指标键，缺字段自动跳过；
  * 2. 比对：下降正好 1 点通过、超过 1 点失败、提升通过、指标缺失算失败；
@@ -15,8 +15,8 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..");
-const script = join(root, "bench", "guard.mjs");
-const baselineFile = join(root, "bench", "guard-baseline.json");
+const script = join(root, "test", "bench", "guard.mjs");
+const baselineFile = join(root, "test", "bench", "guard-baseline.json");
 
 type Metrics = Record<string, number>;
 let mod: Record<string, any> | null = null;
@@ -39,7 +39,7 @@ function tmpDir(): string {
 const BASELINE = JSON.parse(readFileSync(baselineFile, "utf8")) as { metrics: Metrics; counts: Record<string, number> };
 
 /**
- * 纯函数与回归用固定夹具，刻意不读 `bench/guard-baseline.json`：
+ * 纯函数与回归用固定夹具，刻意不读 `test/bench/guard-baseline.json`：
  * 基线会随真实跑分更新（起已是实测未舍入值），断言不应随之漂移。
  * 这里的数字是 的舍入值，只为让 -1.60 这类期望值可读。
  */

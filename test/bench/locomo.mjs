@@ -12,9 +12,9 @@
  *       外加 answer_in_context（官方 RAG 评测的 has_answer 简化版，只看答案串在不在召回上下文里）。
  *       category 5 是 adversarial（前提为假），单独分桶，另算一份不含 5 的汇总。
  * 用法：
- *   node bench/locomo.mjs run --data data/locomo10.json
- *   node bench/locomo.mjs run --data ... --convs 2 --out rows.jsonl --report report.json
- *   node bench/locomo.mjs run --data ... --granularity session --baseline bm25
+ *   node test/bench/locomo.mjs run --data data/locomo10.json
+ *   node test/bench/locomo.mjs run --data ... --convs 2 --out rows.jsonl --report report.json
+ *   node test/bench/locomo.mjs run --data ... --granularity session --baseline bm25
  * 参数：
  *   --data <file>              locomo10.json（必需）
  *   --granularity turn|session 默认 turn（一个 dia_id 一条记忆）
@@ -57,7 +57,7 @@ import { benchConfig, normalizeEn } from "./eval-adapter.mjs";
 import { effectiveSessionK, ndcgAt } from "./longmemeval.mjs";
 import { buildQaReport, createQaPipeline, formatQaLine, resolveQaConfig, runQa } from "./qa.mjs";
 
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const CHUNK = 1900;
 const LEVEL = "topic";
 
@@ -76,7 +76,7 @@ export const CATEGORY_LABEL = {
 
 const USAGE = `LoCoMo 跑分器（零依赖）
 
-  node bench/locomo.mjs run --data <locomo10.json> [选项]
+  node test/bench/locomo.mjs run --data <locomo10.json> [选项]
 
   --granularity turn|session   默认 turn
   --convs <n>                  只跑前 n 段对话

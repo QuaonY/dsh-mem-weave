@@ -21,7 +21,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:scale": "vitest run test/scale-bench.test.ts",
-    "bench:guard": "node bench/guard.mjs",
+    "bench:guard": "node test/bench/guard.mjs",
     "conformance": "node scripts/conformance.mjs --assert-empty",
     "weave": "node scripts/weave.mjs",
     "prepack": "node scripts/build.mjs"

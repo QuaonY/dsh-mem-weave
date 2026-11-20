@@ -1,6 +1,6 @@
 /**
  * 检索基准回归。
- * 新基线记录在 bench/baseline.json；之后每次改动 top3 不低于基线 −0.01、MRR 不低于基线 −0.02。
+ * 新基线记录在 test/bench/baseline.json；之后每次改动 top3 不低于基线 −0.01、MRR 不低于基线 −0.02。
  * full：全开不低于 new 的容差。
  * terms：写入带检索词后，改述多救回 ≥ 2 条，top3 / MRR 在容差内，关联不降，注入增量 ≤ 20%。
  */
@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openService } from "../src/host/index";
-import { applyMode, loadTerms, runBench, type BenchMode, type BenchResult } from "../bench/run";
+import { applyMode, loadTerms, runBench, type BenchMode, type BenchResult } from "./bench/run";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -29,7 +29,7 @@ async function bench(mode: BenchMode): Promise<BenchResult> {
   }
 }
 
-const BASELINE = join(__dirname, "..", "bench", "baseline.json");
+const BASELINE = join(__dirname, "bench", "baseline.json");
 const paraMiss = (r: BenchResult): number => r.misses.filter((m) => m.startsWith("p:")).length;
 
 describe("检索基准", () => {
@@ -40,7 +40,7 @@ describe("检索基准", () => {
     const intent = await bench("intent");
     const full = await bench("full");
     const terms = await bench("terms");
-    writeFileSync(join(__dirname, "..", "bench", "last.json"), JSON.stringify({ legacy, new: now, intent, full, terms }, null, 2) + "\n");
+    writeFileSync(join(__dirname, "bench", "last.json"), JSON.stringify({ legacy, new: now, intent, full, terms }, null, 2) + "\n");
     expect(intent.top3).toBeGreaterThanOrEqual(now.top3 - 0.01);
     expect(intent.mrr).toBeGreaterThanOrEqual(now.mrr - 0.02);
     expect(intent.linkTop5).toBeGreaterThanOrEqual(0.6);

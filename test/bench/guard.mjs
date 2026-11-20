@@ -1,6 +1,6 @@
 /**
  * 检索基准护栏（pnpm bench:guard）。
- * 跑两份全量外部基准，与 bench/guard-baseline.json 比对：
+ * 跑两份全量外部基准，与 test/bench/guard-baseline.json 比对：
  *   - LongMemEval-S 470 题（会话粒度）      → recall_any / recall_all / ndcg @5、@10
  *   - LoCoMo 1,982 题（轮粒度）             → recall_any / recall_all / recall_mean / ndcg / ans_in_ctx @5、@10
  * 任一指标比基线低超过 1 个百分点（默认容差）→ 退出码 1。
@@ -9,11 +9,11 @@
  * MEMWEAVE_LME_DATA / MEMWEAVE_LOCOMO_DATA 指定；缺失时默认跳过
  * 加 --require-all 则当作配置错误（CI 用）。
  * 用法：
- *   node bench/guard.mjs                       # 跑全量并与基线比对
- *   node bench/guard.mjs --require-all         # 缺数据集直接失败
- *   node bench/guard.mjs --update              # 用本次结果重写基线
- *   node bench/guard.mjs --lme-report a.json --locomo-report b.json   # 复用已有报告，不重跑
- *   node bench/guard.mjs --tolerance 2         # 容差改成 2 个百分点
+ *   node test/bench/guard.mjs                       # 跑全量并与基线比对
+ *   node test/bench/guard.mjs --require-all         # 缺数据集直接失败
+ *   node test/bench/guard.mjs --update              # 用本次结果重写基线
+ *   node test/bench/guard.mjs --lme-report a.json --locomo-report b.json   # 复用已有报告，不重跑
+ *   node test/bench/guard.mjs --tolerance 2         # 容差改成 2 个百分点
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -22,7 +22,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, "..");
+const ROOT = resolve(HERE, "..", "..");
 const DEFAULT_BASELINE = join(HERE, "guard-baseline.json");
 
 /** 默认容差：1 个百分点（用小数表示，便于与报告里的 0–1 指标直接相减） */
@@ -133,13 +133,13 @@ function kindOf(name) {
 /* CLI                                                               */
 /* ------------------------------------------------------------------ */
 
-const USAGE = `用法：node bench/guard.mjs [选项]
+const USAGE = `用法：node test/bench/guard.mjs [选项]
 
   --lme-data <file>        LongMemEval-S 数据（默认 data/longmemeval_s_cleaned.json）
   --locomo-data <file>     LoCoMo 数据（默认 data/locomo10.json）
   --lme-report <file>      复用已有的 LME 报告，不重跑
   --locomo-report <file>   复用已有的 LoCoMo 报告，不重跑
-  --baseline <file>        基线（默认 bench/guard-baseline.json）
+  --baseline <file>        基线（默认 test/bench/guard-baseline.json）
   --tolerance <points>     容差，单位「个百分点」，默认 1
   --update                 用本次结果重写基线
   --note <text>            写入基线的口径说明（与 --update 一起用）
@@ -319,7 +319,7 @@ async function main() {
       commit: gitCommit(),
       recordedAt: new Date().toISOString().slice(0, 10),
       tolerance: baseline?.tolerance ?? DEFAULT_TOLERANCE,
-      note: opts.note ?? baseline?.note ?? "由 bench/guard.mjs --update 生成；数值为小数（0.962 = 96.2%）。",
+      note: opts.note ?? baseline?.note ?? "由 test/bench/guard.mjs --update 生成；数值为小数（0.962 = 96.2%）。",
       counts: mergedCounts,
       metrics: mergedMetrics,
     };

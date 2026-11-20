@@ -1,9 +1,9 @@
 /**
- * bench/eval-adapter.mjs（外部记忆基准适配器）回归测试。
+ * test/bench/eval-adapter.mjs（外部记忆基准适配器）回归测试。
  * 覆盖两层：
  * 1. 纯函数：词形归一、gold 名次、上下文裁剪、指标汇总；
  * 2. 命令行端到端：run（一次跑完）与 ingest + retrieve（分两次跑，靠 .eval-ids.json 对齐 gold）。
- * 只跑 fixture（bench/fixtures），不依赖真实 DSH 环境，也不需要联网。
+ * 只跑 fixture（test/bench/fixtures），不依赖真实 DSH 环境，也不需要联网。
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -13,8 +13,8 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..");
-const script = join(root, "bench", "eval-adapter.mjs");
-const fixtures = join(root, "bench", "fixtures");
+const script = join(root, "test", "bench", "eval-adapter.mjs");
+const fixtures = join(root, "test", "bench", "fixtures");
 const memoriesFile = join(fixtures, "eval-memories.jsonl");
 const queriesFile = join(fixtures, "eval-queries.jsonl");
 

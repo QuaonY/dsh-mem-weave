@@ -5,8 +5,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { WeaveService } from "../src/host/service";
-import type { Level } from "../src/core/types";
+import type { WeaveService } from "../../src/host/service";
+import type { Level } from "../../src/core/types";
 
 interface SeedItem { key: string; level: Level; project?: string; content: string; q: string }
 interface Seed {
@@ -48,7 +48,7 @@ export function applyMode(service: WeaveService, mode: BenchMode): void {
   service.config.emotion.residue = { enabled: mode === "full", floor: 0.55, minValence: 0.5 };
   service.config.promise.enabled = on;
   service.config.calendar.enabled = on;
-  // terms= new + 写入时带 bench/terms.json 的检索词；其它模式不写检索词
+  // terms= new + 写入时带 test/bench/terms.json 的检索词；其它模式不写检索词
   service.config.searchTerms.enabled = mode === "terms";
   const c = service.config;
   c.governance.requireConfirmFor = [];

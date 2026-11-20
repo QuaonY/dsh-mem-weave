@@ -1,5 +1,5 @@
 /**
- * bench/qa.mjs（QA 评测管线）回归测试。
+ * test/bench/qa.mjs（QA 评测管线）回归测试。
  * 覆盖四层：
  * 1. 文本口径：答案归一、token F1、EM、heuristic judge、LLM 裁决解析；
  * 2. reader / judge：确定性抽取式 reader、chat 请求形状（假 fetch）、本地 HTTP 端到端；
@@ -16,8 +16,8 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..");
-const qaScript = join(root, "bench", "qa.mjs");
-const locomoScript = join(root, "bench", "locomo.mjs");
+const qaScript = join(root, "test", "bench", "qa.mjs");
+const locomoScript = join(root, "test", "bench", "locomo.mjs");
 
 const dirs: string[] = [];
 function tmp(): string {
@@ -562,7 +562,7 @@ describe("QA 接入跑分器", () => {
 
     const r = spawnSync(
       process.execPath,
-      [join(root, "bench", "longmemeval.mjs"), "run", "--data", dataFile, "--report", reportFile, "--qa", "extractive", "--quiet"],
+      [join(root, "test", "bench", "longmemeval.mjs"), "run", "--data", dataFile, "--report", reportFile, "--qa", "extractive", "--quiet"],
       { cwd: root, encoding: "utf8", timeout: 180_000 },
     );
     expect(r.status).toBe(0);

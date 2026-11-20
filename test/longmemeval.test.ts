@@ -1,5 +1,5 @@
 /**
- * bench/longmemeval.mjs（LongMemEval 跑分器）回归测试。
+ * test/bench/longmemeval.mjs（LongMemEval 跑分器）回归测试。
  * 覆盖两层：
  * 1. 纯函数：日期解析、官方指标的 JS 实现（dcg / ndcg / turn→session 的 k 扩展）；
  * 2. 文档切分：session 粒度按发言边界切块、turn 粒度保留官方 turn 序号与 has_answer 标记；
@@ -14,7 +14,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..");
-const script = join(root, "bench", "longmemeval.mjs");
+const script = join(root, "test", "bench", "longmemeval.mjs");
 
 const dirs: string[] = [];
 function tmp(): string {
