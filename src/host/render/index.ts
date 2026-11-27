@@ -213,7 +213,7 @@ export function previewWithContext(
   if (!first && query) {
     hits = host.recall(query, {
       limit: Math.min(host.config.memory.hitTopK, host.config.budget.recallMaxItems),
-    });
+    }) ?? [];
   }
 
   // 模拟原文旁路（无召回时）
@@ -269,7 +269,7 @@ export function renderTurn(
   if (!input.first && input.query) {
     hits = host.recall(input.query, {
       limit: Math.min(host.config.memory.hitTopK, host.config.budget.recallMaxItems),
-    });
+    }) ?? [];
   }
   const recalledAt = nowMs();
   const out = finishTurn(host, state, input, hits);
@@ -293,13 +293,13 @@ export async function renderTurnAsync(
     const opts = { limit: Math.min(host.config.memory.hitTopK, host.config.budget.recallMaxItems) };
     if (host.recallAsync) {
       try {
-        hits = await host.recallAsync(input.query, opts);
+        hits = (await host.recallAsync(input.query, opts)) ?? [];
       } catch (e) {
         host.warn?.("async recall failed, falling back to sync: " + String(e));
-        hits = host.recall(input.query, opts);
+        hits = host.recall(input.query, opts) ?? [];
       }
     } else {
-      hits = host.recall(input.query, opts);
+      hits = host.recall(input.query, opts) ?? [];
     }
   }
   const recalledAt = nowMs();
@@ -355,12 +355,16 @@ interface TurnInput {
   replay?: boolean;
 }
 
-/** 拿到 hits 之后的共同装配（同步 / 异步入口共用） */
+/**
+ * 拿到 hits 之后的共同装配（同步 / 异步入口共用）。
+ * `hits` 允许 undefined：宿主可能违反契约让 recall 返回 undefined（1.0.2 起 hits.length 崩溃），
+ * 因此这里把每个消费点都做了 `?? []` 兜底。
+ */
 function finishTurn(
   host: RenderHost,
   state: SessionRenderState,
   input: TurnInput,
-  hits: RankedHit[],
+  hits: RankedHit[] | undefined,
 ): { result: RenderResult; inject: boolean; s2: string; s3: string } {
   // 使用会话级 persona（如果有）
   const personaCfg = host.getPersonaForSession(input.sessionId);
@@ -375,21 +379,21 @@ function finishTurn(
     // 只读模式下 bumpAccess/logRecall 失败不影响注入
     if (!host.env.readonly) {
       try {
-        bumpAccess(host.env, hits.map((h) => h.id));
+        bumpAccess(host.env, (hits ?? []).map((h) => h.id));
       } catch (e) {
         host.warn?.("bumpAccess failed (readonly?): " + String(e));
       }
       try {
         // 记命中原因（keyword/vector/link/terms 的组合），排障时不必再重跑召回
-        const reasons = new Map(hits.map((h) => [h.id, h.routes.join("+")]));
-        logRecall(host.env, hits.map((h) => h.id), input.sessionId, input.turn ?? 0, Date.now(), reasons);
+        const reasons = new Map((hits ?? []).map((h) => [h.id, h.routes.join("+")]));
+        logRecall(host.env, (hits ?? []).map((h) => h.id), input.sessionId, input.turn ?? 0, Date.now(), reasons);
       } catch (e) {
         host.warn?.("recall_log write failed (readonly?): " + String(e));
       }
     }
   }
   // 仅关键词与语义两路都空时才走原文旁路（语义路默认关，视为常空）
-  const quotes = !input.first && hits.length === 0 ? quoteLookup(host, input.query ?? "") : [];
+  const quotes = !input.first && (hits ?? []).length === 0 ? quoteLookup(host, input.query ?? "") : [];
   // 约定小节；内容和本会话上次注入的一样就不再注入（同 delta 无变化零注入）
   const promises = host.config.promise.enabled ? state.promisesFor(input.sessionId, promiseLines(host), input.first) : [];
   const result = renderAll({
@@ -398,7 +402,7 @@ function finishTurn(
     budget: host.config.budget,
     snapshotItems: input.first ? snapshotItems(host) : [],
     delta,
-    recallHits: hits,
+    recallHits: hits ?? [],
     quotes,
     promises,
     // 画像只随首轮 S2 注入；后续轮不重复聚合，省掉每轮一次的全库扫描
@@ -418,8 +422,8 @@ function finishTurn(
           trimmed: seg.trimmed,
           // 召回段逐条记命中解释（层、重要度、路由、关联类型、衰减、去同质、反刍），注入页展示
           detail:
-            seg.name === "s3-recall" && hits.length > 0 && seg.items > 0
-              ? recallDetail(hits.slice(0, seg.items))
+            seg.name === "s3-recall" && (hits ?? []).length > 0 && seg.items > 0
+              ? recallDetail((hits ?? []).slice(0, seg.items))
               : undefined,
         });
       } catch (e) {
